@@ -1,0 +1,72 @@
+# Secrets
+.env
+*.key
+*.pem
+SECRET_FILE_DO_NOT_COPY.md
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.out
+CHACHAPOYAN_FERTILITY_IDOL
+*.log
+*.bin
+*.elf
+*.mod
+*.ko
+*.d
+
+# Source trees
+binutils-*/
+gcc-*/
+glibc-*/
+mpfr-*/
+gmp-*/
+mpc-*/
+
+# Archives
+*.tar.*
+*.zip
+*.xz
+*.7z
+
+# Editor junk
+*.swp
+*~
+.DS_Store
+.idea/
+
+# Temporary/Backup
+*.tmp
+*.bak
+*.backup
+*.cache
+*.log.*
+*.old
+*.orig
+
+### Visual Studio Code ###
+.history/
+*.vsix
+.ionide
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+
+### PlatformIO ###
+.pioenvs
+.piolibdeps
+.clang_complete
+.gcc-flags.json
+.pio
+
+### SSH ###
+**/.ssh/id_*
+**/.ssh/*_id_*
+**/.ssh/known_hosts
+.authorized_hosts
