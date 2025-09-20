@@ -71,5 +71,6 @@ mpc-*/
 **/.ssh/known_hosts
 .authorized_hosts
 
-# Build
+# Script Output
 raspberrypi/sysroot
+openwrt-*/
