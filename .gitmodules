@@ -1,0 +1,3 @@
+[submodule "/home/alyssa3467/projects/mcgregor/raspberrypi/linux"]
+	path = /home/alyssa3467/projects/mcgregor/raspberrypi/linux
+	url = git@github.com:raspberrypi/linux

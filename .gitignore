@@ -70,3 +70,6 @@ mpc-*/
 **/.ssh/*_id_*
 **/.ssh/known_hosts
 .authorized_hosts
+
+# Build
+raspberrypi/sysroot
