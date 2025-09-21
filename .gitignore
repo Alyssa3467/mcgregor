@@ -1,5 +1,6 @@
 # Secrets
 .env
+env.sh
 *.key
 *.pem
 SECRET_FILE_DO_NOT_COPY.md
@@ -10,12 +11,16 @@ SECRET_FILE_DO_NOT_COPY.md
 *.so
 *.out
 CHACHAPOYAN_FERTILITY_IDOL
-*.log
 *.bin
 *.elf
 *.mod
 *.ko
 *.d
+
+# Logs
+*.log
+*.log.*
+logs/
 
 # Source trees
 binutils-*/
@@ -36,13 +41,13 @@ mpc-*/
 *~
 .DS_Store
 .idea/
+.shellcheckrc
 
 # Temporary/Backup
 *.tmp
 *.bak
 *.backup
 *.cache
-*.log.*
 *.old
 *.orig
 
@@ -56,7 +61,6 @@ mpc-*/
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
-
 
 ### PlatformIO ###
 .pioenvs
@@ -73,4 +77,4 @@ mpc-*/
 
 # Script Output
 raspberrypi/sysroot
-openwrt-*/
+toolchain-*/
