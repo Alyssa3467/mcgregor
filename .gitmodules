@@ -1,3 +1,0 @@
-[submodule "raspberrypi/linux"]
-	path = raspberrypi/linux
-	url = git@github.com:raspberrypi/linux
