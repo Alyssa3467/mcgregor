@@ -1,6 +1,5 @@
 # Secrets
 .env
-env.sh
 *.key
 *.pem
 SECRET_FILE_DO_NOT_COPY.md
