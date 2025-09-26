@@ -11,7 +11,7 @@ SCRIPT_DIR="$(
 )"
 export SCRIPT_DIR
 
-source "${SCRIPT_DIR}/env.sh"
+. "${SCRIPT_DIR}/env.sh"
 
 . "${SCRIPT_DIR}/sys_checks.sh"
 

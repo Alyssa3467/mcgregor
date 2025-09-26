@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # ${SCRIPT_DIR} should be set correctly by the calling script. Jump ship if it isn't.
@@ -44,7 +44,7 @@ fi
 
 # shellcheck disable=SC2034
 {
-    set -ao auto-export
+    set -ao allexport
     # Project/toolchain settings
     PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 

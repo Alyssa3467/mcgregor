@@ -39,8 +39,8 @@ trap cleanup EXIT
 
 # This will be moved to lotto.sh at some point.
 lotto() {
-        org_temp=$(mktemp /tmp/lotto_org.XXXXXX)
-        ur_temp=$(mktemp /tmp/lotto_ur.XXXXXX)
+    org_temp=$(mktemp /tmp/lotto_org.XXXXXX)
+    ur_temp=$(mktemp /tmp/lotto_ur.XXXXXX)
     {
         # Get 5 numbers from random.org (1–70), sorted
         nums=$(curl_wrapper -s "https://www.random.org/integers/?num=5&min=1&max=70&col=1&base=10&format=plain&rnd=new")
@@ -97,20 +97,21 @@ needed_files=()
 filenames=()
 file_count=0
 all_present=true
+
 for f in "${FILES[@]}"; do
     filenames+=("$(basename "$f")")
-    if [[ ! -f "${filenames[file_count]}" || ! -f "${filenames[file_count]}.sig" ]]; then
+    if [[ ! -f $f || ! -f "$f.sig" ]]; then
         all_present=false
         needed_files+=("${f}")
     fi
-    ((file_count++))
+    ((++file_count))
 done
 
 # --- Conditional network connectivity test ---
 if [[ "$all_present" == false ]]; then
     echo "🌐 Checking network connectivity..."
-    if ! curl_wrapper -s --head --max-time 5 https://www.fema.gov >/dev/null; then
-        echo "❌ Network check failed using curl. Unable to reach FEMA.gov."
+    if ! curl_wrapper -s --head --max-time 5 http://www.msftconnecttest.com/connecttest.txt >/dev/null; then
+        echo "❌ Network check failed using curl. Unable to reach connection test site."
         echo "☎️ Please check your internet connection and try again."
         # If you'd like to make a call, hang up and try again. If you need help, dial the operator
         exit 1
@@ -121,16 +122,18 @@ if [[ "$all_present" == false ]]; then
     jobs=$(((rand_byte % 3 + 1) + ($(od -An -N1 -tu1 </dev/urandom) % 3 + 1)))
     IFS=, big_list="${needed_files[*]}"
     unset IFS
-    echo "📞 Passed. Downloading $((file_count * 2)) files..."
-    curl_wrapper --parallel \
+    curl --parallel \
+        --parallel-max "${jobs}" \
+        --remote-name-all \
         "${BASE_URL}"\{"${big_list}"\} \
         "${BASE_URL}"\{"${big_list}"\}.sig \
-        --parallel-max "${jobs}" \
+        --location \
+        --write-out '%{url_effective} %{http_code}\n' -s -o /dev/null \
         --fail # EMOTIONAL DAMAGE™
 else
     echo "📂 All files and signatures found locally — skipping network check."
 fi
-
+wait
 # --- Persistent workspace keyring ---
 LOCAL_GNUPGHOME="${SOURCE_ROOT}/.gnupg-local"
 mkdir -p "$LOCAL_GNUPGHOME"
@@ -290,6 +293,7 @@ extract_archive() {
 
 }
 
+wait
 for f in "${filenames[@]}"; do
     extract_archive "${f}" & # YOLO!
 done

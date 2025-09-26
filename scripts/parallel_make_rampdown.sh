@@ -3,6 +3,10 @@ set -euo pipefail
 
 # shellcheck disable=SC2120
 parallel_make_rampdown() {
+    if [[ $# -eq 0 ]]; then
+        echo "ℹ️ No targets specified. Defaulting to 'make' with no target."
+        set -- "" # Treat as one empty target
+    fi
     local target=$1
     local attempt=1
     local jobs
