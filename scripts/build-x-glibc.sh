@@ -14,7 +14,7 @@ mkdir -p "${BUILD_ROOT}/build-glibc" && cd "${BUILD_ROOT}/build-glibc" || exit 1
     --disable-profile \
     --without-selinux
 make install-bootstrap-headers=yes install-headers cross-compiling=yes
-./parallel_make_rampdown csu/subdir_lib
+parallel_make_rampdown csu/subdir_lib
 install csu/crt1.o csu/crti.o csu/crtn.o "${SYSROOT}/usr/lib"
 "${CCPREFIX}gcc" -nostdlib -nostartfiles -shared -x c /dev/null -o "${SYSROOT}/usr/lib/libc.so"
 touch "${SYSROOT}"/usr/include/gnu/stubs.h
