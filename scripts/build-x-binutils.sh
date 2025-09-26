@@ -1,6 +1,6 @@
-#!/usr/bin/bash
-
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
+. "${SCRIPT_DIR}/parallel_make_rampdown.sh"
 
 # Build cross binutils
 mkdir -p "${BUILD_ROOT}/build-${ARCH}-binutils" && cd "${BUILD_ROOT}/build-${ARCH}-binutils"
@@ -8,6 +8,8 @@ mkdir -p "${BUILD_ROOT}/build-${ARCH}-binutils" && cd "${BUILD_ROOT}/build-${ARC
     --prefix="${XBIN_FOLDER}" \
     --target="${CCPREFIX}" \
     --disable-multilib \
+    --disable-nls \
     --with-sysroot
-make -j"$(nproc)"
+
+parallel_make_rampdown
 make install-strip

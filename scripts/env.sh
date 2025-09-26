@@ -23,8 +23,23 @@ if [[ $ACTUAL != "$EXPECTED" ]]; then
 fi
 
 if [[ ! -x config.guess ]]; then
-    curl -sSLO https://git.savannah.gnu.org/cgit/config.git/plain/config.guess
+    echo "ℹ️  Fetching GNU config.guess..."
+    curl -fsSLo config.guess \
+        https://git.savannah.gnu.org/cgit/config.git/plain/config.guess || {
+        echo "❌ Failed to download config.guess"
+        exit 1
+    }
     chmod +x config.guess
+fi
+
+if [[ ! -x config.sub ]]; then
+    echo "ℹ️  Fetching GNU config.sub..."
+    curl -fsSLo config.sub \
+        https://git.savannah.gnu.org/cgit/config.git/plain/config.sub || {
+        echo "❌ Failed to download config.sub"
+        exit 1
+    }
+    chmod +x config.sub
 fi
 
 # shellcheck disable=SC2034
@@ -35,10 +50,11 @@ fi
 
     ARCH=arm
     CCPREFIX=arm-linux-gnueabihf
+    NPREFIX=$(./config.guess)
     CROSS_COMPILE=${CCPREFIX}-
 
     # Derived paths
-    NBIN_FOLDER="${PROJECT_ROOT}/toolchain-$(./config.guess)"
+    NBIN_FOLDER="${PROJECT_ROOT}/toolchain-${NPREFIX}"
     XBIN_FOLDER="${PROJECT_ROOT}/toolchain-${CCPREFIX}"
     SYSROOT="${PROJECT_ROOT}/toolchain-${CROSS_COMPILE}sysroot"
     SOURCE_ROOT="${PROJECT_ROOT}/toolchain-src"
@@ -46,5 +62,4 @@ fi
 
     # Tell the download script that we want to install Raspberry Pi kernel headers
     RPI_KERNEL_HEADERS=yes
-    KERNEL=kernel # Raspberry Pi Foundation says we need this for the Pi Zero
 }
