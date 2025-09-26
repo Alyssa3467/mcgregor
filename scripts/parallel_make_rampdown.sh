@@ -7,14 +7,15 @@ parallel_make_rampdown() {
     local attempt=1
     local jobs tried
     local label="${target:-default}"
+    local safe_label="${label//\//_}"
     jobs=$(nproc)
 
     while true; do
         echo "🔧 Attempt $attempt: make -j$jobs ${target:+$target}"
-        if make -j"$jobs" ${target:+$target} 2>&1 | tee "build_${label}_attempt_${attempt}.log"; then
+        if make -j"$jobs" ${target:+$target} 2>&1 | tee "build_${safe_label}_attempt_${attempt}.log"; then
             echo "✅ Build succeeded on attempt $attempt with $jobs jobs"
             break
-        elif grep -q "Segmentation fault" "build_${label}_attempt_${attempt}.log"; then
+        elif grep -q "Segmentation fault" "build_${safe_label}_attempt_${attempt}.log"; then
             echo "❌ Segmentation fault detected during $label build."
             echo "Switching immediately to sequential build."
             jobs=1

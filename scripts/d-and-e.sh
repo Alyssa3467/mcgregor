@@ -99,13 +99,12 @@ file_count=0
 all_present=true
 
 for f in "${FILES[@]}"; do
-    filename="$(basename "$f")"
-    if [[ ! -f "$filename"|| ! -f "$filename.sig" ]]; then
+    filenames+=("$(basename "$f")")
+    if [[ ! -f "${filenames[file_count]}" || ! -f "${filenames[file_count]}.sig" ]]; then
         all_present=false
         needed_files+=("${f}")
-        # Keep track of the number of files needed (assume file & sig are both needed and ×2 later)
-        ((++file_count))
     fi
+    ((++file_count))
 done
 
 # --- Conditional network connectivity test ---
@@ -118,7 +117,7 @@ if [[ "$all_present" == false ]]; then
         exit 1
     fi
 
-    echo "📞 Passed. Downloading $((file_count * 2)) files..."
+    echo "📞 Passed. Downloading $((${#needed_files[@]} * 2)) files..."
     # Decide parallelism: (2d3)
     rand_byte=$(od -An -N1 -tu1 </dev/urandom)
     jobs=$(((rand_byte % 3 + 1) + ($(od -An -N1 -tu1 </dev/urandom) % 3 + 1)))
