@@ -42,7 +42,9 @@ parallel_make_rampdown() {
     local safe_label="${label//\//_}"
 
     while true; do
-        logname="${LOG_FOLDER}/$(date -u '+%Y%m%dT%H%M%SZ')-build-${safe_label}-${attempt}.log"
+        nextjobs=$(((jobs * 3) / 4))
+        ((nextjobs < 1)) && nextjobs=1
+        logname="${LOG_FOLDER}/$(date -u '+%Y%m%dT%H%M%SZ')-${safe_label}-${attempt}.log"
         echo "🔧 Attempt $attempt: make -j$jobs $*" | tee "${logname}"
         if make -j"$jobs" "$@" 2>&1 | tee -a "${logname}"; then
             echo "✅ Build succeeded on attempt $attempt with $jobs jobs"

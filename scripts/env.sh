@@ -55,6 +55,10 @@ fi
     # Project/toolchain settings
     PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 
+    # future expansion
+    # CLIB=[musl|gnu]
+    # TRIPLE=arm-linux-${CLIB}eabihf
+
     ARCH=arm
     CCPREFIX=arm-linux-gnueabihf
     NPREFIX=$(./config.guess)
@@ -68,7 +72,7 @@ fi
     BUILD_ROOT="${PROJECT_ROOT}/toolchain-build"
     LOG_FOLDER="${PROJECT_ROOT}/build-logs"
     mkdir -p "${LOG_FOLDER}"
-    
+
     # Deranged paths
     export PATH="${SCRIPT_DIR}:${PATH}"
 
