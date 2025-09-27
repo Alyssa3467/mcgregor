@@ -51,3 +51,15 @@ refresh_toolchains
 
 # Build cross GCC (stage 2)
 . "${SCRIPT_DIR}/build-x-gcc-stage2.sh"
+
+refresh_toolchains
+
+# Build final cross glibc
+. "${SCRIPT_DIR}/build-x-glibc-final.sh"
+
+refresh_toolchains
+
+# Build cross GCC (stage 3)
+. "${SCRIPT_DIR}/build-x-gcc-stage3.sh"
+
+echo "Yatta!"

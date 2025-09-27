@@ -138,7 +138,7 @@ if [[ "$all_present" == false ]]; then
         "${BASE_URL}"\{"${big_list}"\} \
         "${BASE_URL}"\{"${big_list}"\}.sig \
         --location \
-        --write-out '%{url_effective} %{http_code}\n' -s -o /dev/null \
+        --write-out '%{url_effective} %{http_code}\n' \
         --fail # EMOTIONAL DAMAGE™
 else
     echo "📂 All files and signatures found locally — skipping network check."
