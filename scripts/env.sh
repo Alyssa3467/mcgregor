@@ -46,6 +46,7 @@ if [[ ! -x config.sub ]]; then
         exit 1
     }
     chmod +x config.sub
+    # Why do we even need this?
 fi
 
 # shellcheck disable=SC2034
@@ -65,6 +66,11 @@ fi
     SYSROOT="${PROJECT_ROOT}/toolchain-${CROSS_COMPILE}sysroot"
     SOURCE_ROOT="${PROJECT_ROOT}/toolchain-src"
     BUILD_ROOT="${PROJECT_ROOT}/toolchain-build"
+    LOG_FOLDER="${PROJECT_ROOT}/build-logs"
+    mkdir -p "${LOG_FOLDER}"
+    
+    # Deranged paths
+    export PATH="${SCRIPT_DIR}:${PATH}"
 
     # Tell the download script that we want to install Raspberry Pi kernel headers
     RPI_KERNEL_HEADERS=yes

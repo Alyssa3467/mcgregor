@@ -35,30 +35,32 @@ parallel_make_rampdown() {
     done
     local segfault=0
     local attempt=1
+    local jobs nextjobs logname
     jobs=$(nproc)
-    local nextjobs logname
-    nextjobs=$(jobs)
+    nextjobs=${jobs}
+    label="${PWD##*/}-${label}"
     local safe_label="${label//\//_}"
 
     while true; do
-        logname="build_${safe_label}_attempt_${attempt}.$(date -u '+%Y%m%dT%H%M%SZ').log"
-        echo "🔧 Attempt $attempt: make -j$jobs $*"
-        if make -j"$jobs" "$@" 2>&1 | tee "${logname}"; then
+        logname="${LOG_FOLDER}/$(date -u '+%Y%m%dT%H%M%SZ')-build-${safe_label}-${attempt}.log"
+        echo "🔧 Attempt $attempt: make -j$jobs $*" | tee "${logname}"
+        if make -j"$jobs" "$@" 2>&1 | tee -a "${logname}"; then
             echo "✅ Build succeeded on attempt $attempt with $jobs jobs"
             break
         elif grep -q "Segmentation fault" "${logname}"; then
-            echo "❌ Segmentation fault detected during $label build."
+            echo "❌ Segmentation fault detected during $label build." | tee -a "${logname}"
+            clear
             ((++segfault))
             if ((segfault >= 3)); then
-                echo "Three consecutive segmentation faults detected. Switching immediately to sequential build."
+                echo "Three consecutive segmentation faults detected. Switching immediately to sequential build." | tee -a "${logname}"
                 jobs=1
             fi
         else
             # Reset number of consecutive segfaults
             segfault=0
-            # 🚨 New guard: if we’re already at sequential and it failed, stop looping
+            # 🚨 If we’re already at sequential and it failed, stop looping
             if ((jobs == 1)); then
-                echo "❌ Sequential build failed on attempt $attempt. No further retries."
+                echo "❌ Sequential build failed on attempt $attempt. No further retries." | tee -a "${logname}"
                 return 1
             fi
             nextjobs=$(((jobs * 3) / 4))
