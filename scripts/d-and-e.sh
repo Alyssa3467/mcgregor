@@ -15,19 +15,7 @@ curl_wrapper() {
     curl --config "${SOURCE_ROOT}/.curlrc" "$@"
 }
 
-# --- Project-local curl defaults ---
-CURLRC="${SOURCE_ROOT}/.curlrc"
-if [[ ! -f "$CURLRC" ]]; then
-    cat >"$CURLRC" <<'EOF'
-retry = 5
-retry-delay = 2
-retry-all-errors
-max-time = 30
-fail
-silent
-show-error
-EOF
-fi
+
 
 gpgv_wrapper() {
     gpgv --weak-digest reject "$@"
@@ -87,6 +75,20 @@ lotto() {
 }
 
 mkdir -p "${SOURCE_ROOT}" && cd "${SOURCE_ROOT}" || exit
+
+# --- Project-local curl defaults ---
+CURLRC="${SOURCE_ROOT}/.curlrc"
+if [[ ! -f "$CURLRC" ]]; then
+    cat >"$CURLRC" <<'EOF'
+retry = 5
+retry-delay = 2
+retry-all-errors
+max-time = 30
+fail
+silent
+show-error
+EOF
+fi
 
 export BASE_URL="https://ftpmirror.gnu.org/"
 # --- Files to fetch (relative to mirror root) ---

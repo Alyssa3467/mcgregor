@@ -37,6 +37,7 @@ parallel_make_rampdown() {
     local attempt=1
     jobs=$(nproc)
     local nextjobs logname
+    nextjobs=$(jobs)
     local safe_label="${label//\//_}"
 
     while true; do
