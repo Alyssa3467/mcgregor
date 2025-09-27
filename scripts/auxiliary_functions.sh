@@ -45,14 +45,15 @@ parallel_make_rampdown() {
         nextjobs=$(((jobs * 3) / 4))
         ((nextjobs < 1)) && nextjobs=1
         logname="${LOG_FOLDER}/$(date -u '+%Y%m%dT%H%M%SZ')-${safe_label}-${attempt}.log"
-        echo "🔧 Attempt $attempt: make -j$jobs $*" | tee "${logname}"
+        echo -e "🔧 Attempt $attempt: make -j$jobs $*\n" | tee "${logname}"
         if make -j"$jobs" "$@" 2>&1 | tee -a "${logname}"; then
-            echo "✅ Build succeeded on attempt $attempt with $jobs jobs"
+            echo "✅ Build succeeded on attempt $attempt with $jobs jobs" | tee "${logname}"
             break
         elif grep -q "Segmentation fault" "${logname}"; then
             echo "❌ Segmentation fault detected during $label build." | tee -a "${logname}"
             clear
             ((++segfault))
+            echo -e "Segmentation fault counter: ${segfault}\n" | tee -a "${logname}"
             if ((segfault >= 3)); then
                 echo "Three consecutive segmentation faults detected. Switching immediately to sequential build." | tee -a "${logname}"
                 jobs=1
