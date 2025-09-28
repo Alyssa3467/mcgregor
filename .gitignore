@@ -20,6 +20,7 @@ CHACHAPOYAN_FERTILITY_IDOL
 *.log
 *.log.*
 logs/
+build-logs/
 
 # Source trees
 binutils-*/

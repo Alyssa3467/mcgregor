@@ -8,7 +8,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 # Build cross binutils
-mkdir -p "${BUILD_ROOT}/build-${ARCH}-binutils" && cd "${BUILD_ROOT}/build-${ARCH}-binutils" || return 1
+build_prep "${BUILD_ROOT}/build-${ARCH}-binutils"
+
 "${SOURCE_ROOT}/binutils-2.45/configure" \
     --prefix="${XBIN_FOLDER}" \
     --target="${CCPREFIX}" \

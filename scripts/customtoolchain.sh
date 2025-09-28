@@ -1,5 +1,20 @@
-#!/usr/bin/env bash
+#!/usr/bin/env -iS PATH=/usr/bin:/bin HOME="${HOME}" USER="${USER}" TERM=xterm-256color LANG=C bash
+
 set -ueo pipefail
+SKIP_NATIVE=no
+
+for arg in "$@"; do
+    case "$arg" in
+        --skip-native)
+            SKIP_NATIVE=yes
+            shift
+            ;;
+        *)
+            echo "Unknown option: $arg" >&2
+            exit 1
+            ;;
+    esac
+done
 
 # Set up environment
 SCRIPT_DIR="$(
@@ -24,14 +39,19 @@ if [[ "${RPI_KERNEL_HEADERS:-no}" == "yes" ]]; then
 fi
 wait
 
-# Build native binutils
-. "${SCRIPT_DIR}/build-n-binutils.sh"
+if [[ "$SKIP_NATIVE" != "yes" ]]; then
+    # Build native binutils
+    . "${SCRIPT_DIR}/build-n-binutils.sh"
 
-refresh_toolchains
+    refresh_toolchains
 
-# Build native GCC
-. "${SCRIPT_DIR}/build-n-gcc.sh"
+    # Build native GCC
+    . "${SCRIPT_DIR}/build-n-gcc.sh"
+else
+    echo "Skipping native toolchain build (--skip-native)"
+fi
 
+unset PATH
 refresh_toolchains
 
 # Build cross-compiled binutils

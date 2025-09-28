@@ -7,7 +7,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
-mkdir -p "${BUILD_ROOT}/build-${CCPREFIX}-gcc-stage2" && cd "${BUILD_ROOT}/build-${CCPREFIX}-gcc-stage2" || return 1
+build_prep "${BUILD_ROOT}/build-${CCPREFIX}-gcc-stage2"
+
 "${SOURCE_ROOT}/gcc-15.2.0/configure" \
     --target="${CCPREFIX}" \
     --prefix="${XBIN_FOLDER}" \

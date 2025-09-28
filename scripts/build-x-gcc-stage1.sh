@@ -7,23 +7,34 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
-# Build minimal cross GCC (stage 1)
-mkdir -p "${BUILD_ROOT}/build-${CCPREFIX}-gcc-stage1" && cd "${BUILD_ROOT}/build-${CCPREFIX}-gcc-stage1" || return 1
+# shellcheck disable=SC2034
+(
+    # Build minimal cross GCC (stage 1)
+    build_prep "${BUILD_ROOT}/build-${CCPREFIX}-gcc-stage1"
 
-"${SOURCE_ROOT}/gcc-15.2.0/configure" \
-    --prefix="${XBIN_FOLDER}" \
-    --target="${CCPREFIX}" \
-    --with-sysroot="${SYSROOT}" \
-    --enable-languages=c \
-    --disable-multilib \
-    --disable-shared \
-    --disable-threads \
-    --disable-libatomic \
-    --disable-libgomp \
-    --disable-libquadmath \
-    --disable-libssp \
-    --disable-libvtv \
-    --disable-nls
+    CC="${CCPREFIX}"-gcc
+    CXX="${CCPREFIX}"-g++
+    AR="${CCPREFIX}"-ar
+    RANLIB="${CCPREFIX}"-ranlib
 
-parallel_make_rampdown all-gcc
-parallel_make_rampdown install-gcc
+    "${SOURCE_ROOT}/gcc-15.2.0/configure" \
+        --prefix="${XBIN_FOLDER}" \
+        --target="${CCPREFIX}" \
+        --with-sysroot="${SYSROOT}" \
+        --enable-languages=c \
+        --disable-multilib \
+        --disable-shared \
+        --disable-threads \
+        --disable-libatomic \
+        --disable-libgomp \
+        --disable-libquadmath \
+        --disable-libssp \
+        --disable-libvtv \
+        --disable-nls \
+        --without-headers
+
+    parallel_make_rampdown all-gcc
+    parallel_make_rampdown install-gcc startjobs=1
+    parallel_make_rampdown all-target-libgcc
+    parallel_make_rampdown install-target-libgcc startjobs=1
+)

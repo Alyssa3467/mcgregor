@@ -8,7 +8,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 # Build cross glibc (again)
-mkdir -p "${BUILD_ROOT}/build-glibc-final" && cd "${BUILD_ROOT}/build-glibc-final" || exit 1
+build_prep "${BUILD_ROOT}/build-glibc-final"
+
 "${SOURCE_ROOT}/glibc-2.42/configure" \
     --build="${NPREFIX}" \
     --host="${CCPREFIX}" \

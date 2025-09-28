@@ -8,7 +8,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 # Build native binutils
-mkdir -p "${BUILD_ROOT}/build-$(arch)-binutils" && cd "${BUILD_ROOT}/build-$(arch)-binutils" || return 1
+build_prep "${BUILD_ROOT}/build-$(arch)-binutils"
+
 "${SOURCE_ROOT}/binutils-2.45/configure" \
     --prefix="${NBIN_FOLDER}" \
     --disable-multilib

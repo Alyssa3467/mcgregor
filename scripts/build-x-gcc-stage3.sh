@@ -8,7 +8,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 # Build cross GCC (stage 3)
-mkdir -p "${BUILD_ROOT}/build-${CCPREFIX}-gcc-stage3" && cd "${BUILD_ROOT}/build-${CCPREFIX}-gcc-stage3" || exit 1
+build_prep "${BUILD_ROOT}/build-${CCPREFIX}-gcc-stage3"
+
 "${SOURCE_ROOT}/gcc-15.2.0/configure" \
     --target="${CCPREFIX}" \
     --prefix="${XBIN_FOLDER}" \

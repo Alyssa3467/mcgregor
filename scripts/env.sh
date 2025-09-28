@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # Detect if this file is being sourced or run directly
 # BASH_SOURCE[0] is the current file, $0 is the script name
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
@@ -51,7 +52,7 @@ fi
 
 # shellcheck disable=SC2034
 {
-    set -ao allexport
+    set -a
     # Project/toolchain settings
     PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 
@@ -78,4 +79,5 @@ fi
 
     # Tell the download script that we want to install Raspberry Pi kernel headers
     RPI_KERNEL_HEADERS=yes
+    set +a
 }

@@ -8,7 +8,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 # Build cross glibc
-mkdir -p "${BUILD_ROOT}/build-glibc" && cd "${BUILD_ROOT}/build-glibc" || exit 1
+build_prep "${BUILD_ROOT}/build-glibc"
+
 "${SOURCE_ROOT}/glibc-2.42/configure" \
     --build="${NPREFIX}" \
     --host="${CCPREFIX}" \
@@ -17,11 +18,18 @@ mkdir -p "${BUILD_ROOT}/build-glibc" && cd "${BUILD_ROOT}/build-glibc" || exit 1
     --enable-kernel=3.2.0 \
     --disable-multilib \
     --disable-profile \
-    --without-selinux
-make install-bootstrap-headers=yes install-headers cross-compiling=yes
+    --without-selinux \
+    --with-headers="${SYSROOT}/usr/include"
+
+parallel_make_rampdown install-bootstrap-headers=yes \
+    install-headers cross-compiling=yes install_root="$SYSROOT"
 parallel_make_rampdown csu/subdir_lib
-mkdir -p "${SYSROOT}/usr/lib"
-mkdir -p "${SYSROOT}/usr/include/gnu"
-install csu/crt1.o csu/crti.o csu/crtn.o "${SYSROOT}/usr/lib"
-"${CROSS_COMPILE}gcc" -nostdlib -nostartfiles -shared -x c /dev/null -o "${SYSROOT}/usr/lib/libc.so"
-touch "${SYSROOT}"/usr/include/gnu/stubs.h
+
+install -D csu/crt1.o "${SYSROOT}/usr/lib"
+install -D csu/crti.o "${SYSROOT}/usr/lib"
+install -D csu/crtn.o "${SYSROOT}/usr/lib"
+
+# Provide stubs.h until full build
+install -D /dev/null "${SYSROOT}/usr/include/gnu/stubs.h"
+
+"${CROSS_COMPILE}"gcc -nostdlib -nostartfiles -shared -x c /dev/null -o "${SYSROOT}"/usr/lib/libc.so
