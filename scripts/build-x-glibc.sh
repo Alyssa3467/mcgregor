@@ -25,11 +25,11 @@ parallel_make_rampdown install-bootstrap-headers=yes \
     install-headers cross-compiling=yes install_root="$SYSROOT"
 parallel_make_rampdown csu/subdir_lib
 
-install -D csu/crt1.o "${SYSROOT}/usr/lib"
-install -D csu/crti.o "${SYSROOT}/usr/lib"
-install -D csu/crtn.o "${SYSROOT}/usr/lib"
+filename="${LOG_FOLDER}/$(date -u '+%Y%m%dT%H%M%SZ')-glibc-install.log"
+
+install --debug -Dt "${SYSROOT}/usr/lib" csu/crt1.o  csu/crtn.o  csu/crti.o  2>&1 | tee -a "${filename}"
 
 # Provide stubs.h until full build
-install -D /dev/null "${SYSROOT}/usr/include/gnu/stubs.h"
+install --debug -D /dev/null "${SYSROOT}/usr/include/gnu/stubs.h"  | tee -a "${filename}"
 
 "${CROSS_COMPILE}"gcc -nostdlib -nostartfiles -shared -x c /dev/null -o "${SYSROOT}"/usr/lib/libc.so

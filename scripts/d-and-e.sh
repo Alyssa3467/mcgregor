@@ -106,9 +106,9 @@ export GNU_BASE_URL="https://ftpmirror.gnu.org/"
 GNU_FILES=(
     "binutils/binutils-2.45.tar.bz2"
     "gcc/gcc-15.2.0/gcc-15.2.0.tar.gz"
-    "mpfr/mpfr-4.2.2.tar.bz2"
-    "gmp/gmp-6.3.0.tar.bz2"
-    "mpc/mpc-1.3.1.tar.gz"
+#    "mpfr/mpfr-4.2.2.tar.bz2"
+#    "gmp/gmp-6.3.0.tar.bz2"
+#    "mpc/mpc-1.3.1.tar.gz"
     "glibc/glibc-2.42.tar.bz2"
 )
 for g in "${GNU_FILES[@]}"; do
@@ -336,3 +336,6 @@ for f in "${filenames[@]}"; do
     extract_archive "${f}" & # YOLO!
 done
 wait
+
+cd gcc-* || return 1
+"${SCRIPT_DIR}"/gcc/dl_gcc_prequisites.sh

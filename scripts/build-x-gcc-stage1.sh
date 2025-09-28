@@ -33,8 +33,8 @@ fi
         --disable-nls \
         --without-headers
 
-    parallel_make_rampdown all-gcc
+    unset SYSROOT
+
+    parallel_make_rampdown all-gcc startjobs=15
     parallel_make_rampdown install-gcc startjobs=1
-    parallel_make_rampdown all-target-libgcc
-    parallel_make_rampdown install-target-libgcc startjobs=1
 )
