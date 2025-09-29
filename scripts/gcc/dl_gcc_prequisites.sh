@@ -87,7 +87,7 @@ This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
 
 die() {
-    echo "error: $@" >&2
+    echo "error: " "$@" >&2
     exit 1
 }
 
@@ -127,7 +127,7 @@ md5_check() {
 argnext=
 for arg in "$@"
 do
-    if [ "x${argnext}" = x ]
+    if [ "${argnext}" = "" ]
     then
         case "${arg}" in
             --directory)
@@ -189,7 +189,7 @@ do
         argnext=
     fi
 done
-[ "x${argnext}" = x ] || die "Missing argument for option --${argnext}"
+[ "${argnext}" = "" ] || die "Missing argument for option --${argnext}"
 unset arg argnext
 
 case $chksum_extension in
@@ -238,8 +238,8 @@ unset ar
 
 if [ ${verify} -gt 0 ]
 then
-    chksumfile="{SCRIPT_DIR}/gcc/gcc_preqs.${chksum_extension}"
-    [ -r "${chksumfile}" ] || die "No checksums available"
+    chksumfile="${SCRIPT_DIR}/gcc/gcc_preqs.${chksum_extension}"
+    [ -r "${chksumfile}" ] || die "No checksums available at ${chksumfile}"
     for ar in $(echo_archives)
     do
         grep "${ar}" "${chksumfile}"                                          \
@@ -253,7 +253,7 @@ unset ar
 for ar in $(echo_archives)
 do
     package="${ar%.tar*}"
-    if [ ${force} -gt 0 ]; then rm -rf "${directory}/${package}"; fi
+    if [ ${force} -gt 0 ]; then rm -rf "${directory:?}/${package}"; fi
     case $ar in
     *.gz)
 	uncompress='gzip -d'

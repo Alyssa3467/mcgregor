@@ -7,15 +7,11 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
-# Build cross binutils
-build_prep "${BUILD_ROOT}/build-${ARCH}-binutils"
+# Build native binutils
+build_prep "${N_BUILD_DIR}/binutils"
 
 "${SOURCE_ROOT}/binutils-2.45/configure" \
-    --prefix="${XBIN_FOLDER}" \
-    --target="${CCPREFIX}" \
-    --disable-multilib \
-    --disable-nls \
-    --with-sysroot
-
+    --prefix="${N_INST_DIR}" \
+    --disable-multilib
 parallel_make_rampdown
-make install-strip
+parallel_make_rampdown install-strip

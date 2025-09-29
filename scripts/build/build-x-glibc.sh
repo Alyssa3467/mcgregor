@@ -8,7 +8,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 # Build cross glibc
-build_prep "${BUILD_ROOT}/build-glibc"
+build_prep "${X_BUILD_DIR}/build-glibc"
 
 "${SOURCE_ROOT}/glibc-2.42/configure" \
     --build="${NPREFIX}" \
@@ -21,15 +21,14 @@ build_prep "${BUILD_ROOT}/build-glibc"
     --without-selinux \
     --with-headers="${SYSROOT}/usr/include"
 
-parallel_make_rampdown install-bootstrap-headers=yes \
-    install-headers cross-compiling=yes install_root="$SYSROOT"
+parallel_make_rampdown install-headers
 parallel_make_rampdown csu/subdir_lib
 
-filename="${LOG_FOLDER}/$(date -u '+%Y%m%dT%H%M%SZ')-glibc-install.log"
+filename="${LOG_DIR}/$(date -u '+%Y%m%dT%H%M%SZ')-glibc-install.log"
 
-install --debug -Dt "${SYSROOT}/usr/lib" csu/crt1.o  csu/crtn.o  csu/crti.o  2>&1 | tee -a "${filename}"
+install --debug csu/crt1.o csu/crti.o csu/crtn.o "$SYSROOT"/usr/lib 2>&1 | tee -a "${filename}"
+echo -e "\n\nGCC\n\n"  | tee -a "${filename}"
+"${CROSS_COMPILE}"gcc -nostdlib -nostartfiles -shared -x c /dev/null -o "${SYSROOT}"/usr/lib/libc. | tee -a "${filename}"
 
 # Provide stubs.h until full build
-install --debug -D /dev/null "${SYSROOT}/usr/include/gnu/stubs.h"  | tee -a "${filename}"
-
-"${CROSS_COMPILE}"gcc -nostdlib -nostartfiles -shared -x c /dev/null -o "${SYSROOT}"/usr/lib/libc.so
+touch "$SYSROOT"/usr/include/gnu/stubs.h

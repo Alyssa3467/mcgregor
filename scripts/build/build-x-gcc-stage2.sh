@@ -7,18 +7,20 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
-# Build cross glibc (again)
-build_prep "${BUILD_ROOT}/build-glibc-final"
+build_prep "${X_BUILD_DIR}/gcc-stage2"
 
-"${SOURCE_ROOT}/glibc-2.42/configure" \
-    --build="${NPREFIX}" \
-    --host="${CCPREFIX}" \
+"${SOURCE_ROOT}/gcc-15.2.0/configure" \
+    --target="${CCPREFIX}" \
+    --prefix="${X_INST_DIR}" \
     --with-sysroot="${SYSROOT}" \
-    --prefix=/usr \
-    --enable-kernel=3.2.0 \
+    --with-headers="${SYSROOT}/usr/include" \
+    --enable-languages=c,c++ \
     --disable-multilib \
-    --disable-profile \
-    --without-selinux
+    --disable-bootstrap \
+    --enable-shared \
+    --enable-threads=posix \
+    --enable-__cxa_atexit \
+    "${X_GCC_CONFIG}"
 
 parallel_make_rampdown
-make install DESTDIR="${SYSROOT}"
+make install-strip

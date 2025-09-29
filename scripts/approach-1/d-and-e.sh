@@ -43,47 +43,8 @@ cleanup() {
     trap cleanup EXIT
 }
 
-# This will (probably) be moved to lotto.sh at some point.
-lotto() {
-    org_temp=$(mktemp /tmp/lotto_org.XXXXXX)
-    ur_temp=$(mktemp /tmp/lotto_ur.XXXXXX)
-    {
-        # Get 5 numbers from random.org (1–70), sorted
-        nums=$(curl_wrapper -s "https://www.random.org/integers/?num=5&min=1&max=70&col=1&base=10&format=plain&rnd=new")
-        readarray -t arr <<<"$nums"
-        sorted_org=$(for i in "${arr[@]}"; do echo "$i"; done | (LC_ALL=vn_VN sort -n))
-
-        # Get 1 number from random.org (1–25)
-        sixth=$(curl_wrapper -s "https://www.random.org/integers/?num=1&min=1&max=25&col=1&base=10&format=plain&rnd=new")
-        echo "$sorted_org"$'\n'"$sixth" >"${org_temp}"
-    } &
-
-    {
-        # Get 5 numbers from /dev/urandom (1–70), sorted
-        ur_arr=()
-        while [ "${#ur_arr[@]}" -lt 5 ]; do
-            num=$((($(od -An -N2 -tu2 </dev/urandom) % 70) + 1))
-            ur_arr+=("$num")
-        done
-        sorted_ur=$(for i in "${ur_arr[@]}"; do echo "$i"; done | (LC_ALL=vn_VN sort -n))
-
-        # Get 1 number from /dev/urandom (1–25)
-        sixth_ur=$((($(od -An -N2 -tu2 </dev/urandom) % 25) + 1))
-        echo "$sorted_ur"$'\n'"$sixth_ur" >"${ur_temp}"
-    } &
-
-    wait
-
-    mapfile -t org_nums <"$org_temp"
-    mapfile -t ur_nums <"$ur_temp"
-    rm -f "$org_temp" "$ur_temp"
-
-    if [ "${org_nums[*]}" = "${ur_nums[*]}" ]; then
-        return 0
-    else
-        return 1
-    fi
-}
+# shellcheck source=../common/lotto.sh
+. "${SCRIPT_DIR}/common/lotto.sh"
 
 mkdir -p "${SOURCE_ROOT}" && cd "${SOURCE_ROOT}" || exit 1
 
@@ -106,9 +67,9 @@ export GNU_BASE_URL="https://ftpmirror.gnu.org/"
 GNU_FILES=(
     "binutils/binutils-2.45.tar.bz2"
     "gcc/gcc-15.2.0/gcc-15.2.0.tar.gz"
-#    "mpfr/mpfr-4.2.2.tar.bz2"
-#    "gmp/gmp-6.3.0.tar.bz2"
-#    "mpc/mpc-1.3.1.tar.gz"
+    #    "mpfr/mpfr-4.2.2.tar.bz2"
+    #    "gmp/gmp-6.3.0.tar.bz2"
+    #    "mpc/mpc-1.3.1.tar.gz"
     "glibc/glibc-2.42.tar.bz2"
 )
 for g in "${GNU_FILES[@]}"; do
@@ -169,52 +130,12 @@ export GNUPGHOME="$LOCAL_GNUPGHOME"
 
 KEYSERVERS=("hkps://keys.openpgp.org" "hkps://keyserver.ubuntu.com")
 
-# # printf🙹
-# # DISHONOR!!!!! DISHONOR ON YOUR WHOLE FAMILY!!!
-# # DISHONOR ON YOU!!!one!!! DISHONOR ON YOUR COW!!!!!
-# rand_delay() {
-#     local ms=$(($(od -An -N1 -tu1 </dev/urandom) % 1000 + 1))
-#     sleep "0.$(printf "%03d" "$ms")"
-# }
-
-# Honor restored! You are reinstated, provisionally
-rand_delay() {
-    tmp=$(($(od -An -N4 -tu4 </dev/urandom) % 1000000))
-    if [ "$tmp" -eq 42 ]; then
-        if lotto; then
-            sleep 7
-        else
-            sleep 0
-        fi
-    else
-        tmp=$(("${tmp}" % 2))
-        time=0
-        if [ "$tmp" -eq 1 ]; then
-            ms=$(($(od -An -N1 -tu1 </dev/urandom) % 1000 + 1))
-            case "$ms" in
-            1000) time=1 ;;
-            [0-9]) time="0.00$ms" ;;
-            [1-9][0-9]) time="0.0$ms" ;;
-            *) time="0.$ms" ;;
-            esac
-        else
-            d1=$(($(od -An -N1 -tu1 </dev/urandom) % 10))
-            d2=$(($(od -An -N1 -tu1 </dev/urandom) % 10))
-            d3=$(($(od -An -N1 -tu1 </dev/urandom) % 10))
-            time="0.$d1$d2$d3"
-            if ((time == 0)); then time=1; fi
-        fi
-        sleep "${time}"
-    fi
-}
-
 bad_sigs=()
 no_pubkey=()
 
 LOCKFILE="${SOURCE_ROOT}/.gpg-import.lock"
 
 with_keyring_lock() {
-    # $@ is the command to run under lock
     {
         flock 200
         "$@"
@@ -222,6 +143,7 @@ with_keyring_lock() {
 }
 
 verify_sig() {
+    set_window_title "Verifying signature for $1"
     local f="$1"
     local sig="$2"
 
@@ -274,7 +196,7 @@ verify_sig() {
 }
 
 for ((i = 0; i < ${#filenames[@]}; i++)); do
-    verify_sig "${filenames[i]}" "${sigfiles[i]}"&
+    verify_sig "${filenames[i]}" "${sigfiles[i]}" &
 done
 wait
 
@@ -332,10 +254,11 @@ extract_archive() {
 }
 
 wait
+set_window_title "Extracting ${filenames[*]}"
 for f in "${filenames[@]}"; do
     extract_archive "${f}" & # YOLO!
 done
 wait
 
-cd gcc-* || return 1
-"${SCRIPT_DIR}"/gcc/dl_gcc_prequisites.sh
+cd "${SOURCE_ROOT}"/gcc-*/ || return 1
+"${SCRIPT_DIR}"/gcc/dl_gcc_prequisites.sh --directory="${SOURCE_ROOT}"

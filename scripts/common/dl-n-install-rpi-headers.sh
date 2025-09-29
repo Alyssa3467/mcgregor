@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+set -euo pipefail
+
 # Detect if this file is being sourced or run directly
 # BASH_SOURCE[0] is the current file, $0 is the script name
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
@@ -9,7 +12,6 @@ fi
 
 # Best know what you're doing, 'cause this be somewhat destructive
 
-set -euo pipefail
 command -v git >/dev/null || {
     echo "❌ git not found"
     exit 1
@@ -50,6 +52,7 @@ if git config --file "$(git rev-parse --show-toplevel)/.gitmodules" \
     fi
 
 elif [ ! -d "${PROJECT_ROOT}/raspberrypi/linux" ]; then
+    set_window_title "git Raspberry Pi Linux kernel"
     echo "➕ Adding Raspberry Pi Linux kernel as a git submodule..."
     git submodule add --force git@github.com:raspberrypi/linux "linux" 2>&1 | tee submodule.log
     echo "✅ Submodule added successfully."
@@ -59,6 +62,7 @@ else
 fi
 
 # 🧵 Install kernel headers
+set_window_title "Installing Raspberry Pi kernel headers"
 cd "${PROJECT_ROOT}/raspberrypi/linux"
 echo "🛠️  Installing Raspberry Pi kernel headers..."
 mkdir -p "${SYSROOT}/usr" # ensure destination exists
@@ -66,4 +70,4 @@ export KERNEL=kernel      # Raspberry Pi Foundation says we need this for the Pi
 DEFCONFIG="${DEFCONFIG:-bcmrpi_defconfig}"
 make ARCH="${ARCH}" CROSS_COMPILE="${CROSS_COMPILE}" "${DEFCONFIG}" V=2
 make ARCH="${ARCH}" INSTALL_HDR_PATH="${SYSROOT}/usr" headers_install V=2
-echo "✅ Kernel headers installed to ${SYSROOT}/usr/include"
+echo "✅ Kernel headers installed to ${SYSROOT}/usr"

@@ -10,15 +10,15 @@ fi
 # shellcheck disable=SC2034
 (
     # Build minimal cross GCC (stage 1)
-    build_prep "${BUILD_ROOT}/build-${CCPREFIX}-gcc-stage1"
+    build_prep "${X_BUILD_DIR}/gcc-stage1"
 
-    CC="${CCPREFIX}"-gcc
-    CXX="${CCPREFIX}"-g++
-    AR="${CCPREFIX}"-ar
-    RANLIB="${CCPREFIX}"-ranlib
+    # CC="${CCPREFIX}"-gcc
+    # CXX="${CCPREFIX}"-g++
+    # AR="${CCPREFIX}"-ar
+    # RANLIB="${CCPREFIX}"-ranlib
 
     "${SOURCE_ROOT}/gcc-15.2.0/configure" \
-        --prefix="${XBIN_FOLDER}" \
+        --prefix="${X_INST_DIR}" \
         --target="${CCPREFIX}" \
         --with-sysroot="${SYSROOT}" \
         --enable-languages=c \
@@ -31,10 +31,12 @@ fi
         --disable-libssp \
         --disable-libvtv \
         --disable-nls \
-        --without-headers
+        --without-headers \
+        "${X_GCC_CONFIG}"
 
-    unset SYSROOT
+    unset X_GCC_CONFIG
 
+    # Start make at -j15 instead of -j20
     parallel_make_rampdown all-gcc startjobs=15
     parallel_make_rampdown install-gcc startjobs=1
 )

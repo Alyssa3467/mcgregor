@@ -15,7 +15,7 @@ cd "${SCRIPT_DIR:?SCRIPT_DIR must be set}" || {
     exit 1
 }
 
-EXPECTED="${SCRIPT_DIR}"
+EXPECTED="${SCRIPT_DIR}/common"
 ACTUAL="$(
     if command -v readlink >/dev/null && readlink -f . >/dev/null 2>&1; then
         cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd
@@ -64,18 +64,21 @@ fi
     CCPREFIX=arm-linux-gnueabihf
     NPREFIX=$(./config.guess)
     CROSS_COMPILE=${CCPREFIX}-
+    X_GCC_CONFIG="--with-arch=armv6 \
+  --with-fpu=vfp \
+  --with-float=hard \
+  --with-tune=arm1176jzf-s"
 
     # Derived paths
-    NBIN_FOLDER="${PROJECT_ROOT}/toolchain-${NPREFIX}"
-    XBIN_FOLDER="${PROJECT_ROOT}/toolchain-${CCPREFIX}"
-    SYSROOT="${PROJECT_ROOT}/toolchain-${CROSS_COMPILE}sysroot"
-    SOURCE_ROOT="${PROJECT_ROOT}/toolchain-src"
-    BUILD_ROOT="${PROJECT_ROOT}/toolchain-build"
-    LOG_FOLDER="${PROJECT_ROOT}/build-logs"
-    mkdir -p "${LOG_FOLDER}"
-
-    # Deranged paths
-    export PATH="${SCRIPT_DIR}:${PATH}"
+    N_INST_DIR="${PROJECT_ROOT}/toolchain/install/${NPREFIX}"
+    N_BUILD_DIR="${PROJECT_ROOT}/toolchain/build/${NPREFIX}"
+    X_INST_DIR="${PROJECT_ROOT}/toolchain/install/${CCPREFIX}"
+    X_BUILD_DIR="${PROJECT_ROOT}/toolchain/build/${CCPREFIX}"
+    SYSROOT="${PROJECT_ROOT}/toolchain/sysroot/${CROSS_COMPILE}"
+    SOURCE_ROOT="${PROJECT_ROOT}/toolchain/src"
+    BUILD_ROOT="${PROJECT_ROOT}/toolchain/build"
+    LOG_DIR="${PROJECT_ROOT}/toolchain/build/logs"
+    mkdir -p "${LOG_DIR}"
 
     # Tell the download script that we want to install Raspberry Pi kernel headers
     RPI_KERNEL_HEADERS=yes

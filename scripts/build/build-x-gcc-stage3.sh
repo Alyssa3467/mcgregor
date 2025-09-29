@@ -7,16 +7,15 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
-build_prep "${BUILD_ROOT}/build-${CCPREFIX}-gcc-stage2"
+# Build cross GCC (stage 3)
+build_prep "${X_BUILD_DIR}/gcc-stage3"
 
 "${SOURCE_ROOT}/gcc-15.2.0/configure" \
     --target="${CCPREFIX}" \
-    --prefix="${XBIN_FOLDER}" \
+    --prefix="${X_INST_DIR}" \
     --with-sysroot="${SYSROOT}" \
-    --with-headers="${SYSROOT}/usr/include" \
     --enable-languages=c,c++ \
     --disable-multilib \
-    --disable-bootstrap \
     --enable-shared \
     --enable-threads=posix \
     --enable-__cxa_atexit
