@@ -39,7 +39,6 @@ mpc-*/
 *.swp
 .DS_Store
 .idea/
-.shellcheckrc
 
 # Temporary/Backup
 *~
