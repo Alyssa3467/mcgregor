@@ -3,6 +3,10 @@
 *.key
 *.pem
 SECRET_FILE_DO_NOT_COPY.md
+**/.ssh/id_*
+**/.ssh/*_id_*
+**/.ssh/known_hosts
+.authorized_hosts
 
 # Build artifacts
 *.o
@@ -22,6 +26,7 @@ CHACHAPOYAN_FERTILITY_IDOL
 logs/
 
 # Source trees
+source/
 binutils-*/
 gcc-*/
 glibc-*/
@@ -57,8 +62,10 @@ mpc-*/
 *.old
 *.orig
 *.tmp
+tmp.*/
 
 ### Visual Studio Code ###
+.history
 .history/
 *.vsix
 .ionide
@@ -76,13 +83,8 @@ mpc-*/
 .gcc-flags.json
 .pio
 
-### SSH ###
-**/.ssh/id_*
-**/.ssh/*_id_*
-**/.ssh/known_hosts
-.authorized_hosts
-
 # Script Output
+build/
 raspberrypi/sysroot
 toolchain/
 
@@ -90,32 +92,29 @@ toolchain/
 config.guess
 config.sub
 
-# For PCBs designed using KiCad: https://www.kicad.org/
-# Format documentation: https://kicad.org/help/file-formats/
-
-
+# KiCad
 _autosave-*
 \#auto_saved_files\#
-*.tmp
 *-save.pro
 *-save.kicad_pcb
 fp-info-cache
 ~*.lck
 \#auto_saved_files#
-
-# Netlist files (exported from Eeschema)
 *.net
-
-# Autorouter files (exported from Pcbnew)
 *.dsn
 *.ses
-
-# Exported BOM files
 *.xml
 *.csv
-
-# Archived Backups (KiCad 6.0)
 **/*-backups/*.zip
-
-# Local project settings
 *.kicad_prl
+keys/
+
+# Created by git when using merge tools for conflicts
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+*_BACKUP_*.txt
+*_BASE_*.txt
+*_LOCAL_*.txt
+*_REMOTE_*.txt
