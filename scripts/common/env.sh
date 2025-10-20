@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 # Detect if this file is being sourced or run directly
 # BASH_SOURCE[0] is the current file, $0 is the script name
@@ -8,79 +9,104 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
-# ${SCRIPT_DIR} should be set correctly by the calling script. Jump ship if it isn't.
-# (besides, the download we're about to do, a script, should live there anyway)
-cd "${SCRIPT_DIR:?SCRIPT_DIR must be set}" || {
-    echo "Failed to change directory to SCRIPT_DIR: '$SCRIPT_DIR'" >&2
-    exit 1
-}
-
-EXPECTED="${SCRIPT_DIR}/common"
-ACTUAL="$(
-    if command -v readlink >/dev/null && readlink -f . >/dev/null 2>&1; then
-        cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd
-    else
-        cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd
-    fi
-)"
-
-if [[ $ACTUAL != "$EXPECTED" ]]; then
-    echo -e "Script not in expected location. Terminating.\n"
-    exit 1
-fi
-
-if [[ ! -x config.guess ]]; then
-    echo "ℹ️  Fetching GNU config.guess..."
-    curl -fsSLo config.guess \
-        https://git.savannah.gnu.org/cgit/config.git/plain/config.guess || {
-        echo "❌ Failed to download config.guess"
-        exit 1
-    }
-    chmod +x config.guess
-fi
-
-if [[ ! -x config.sub ]]; then
-    echo "ℹ️  Fetching GNU config.sub..."
-    curl -fsSLo config.sub \
-        https://git.savannah.gnu.org/cgit/config.git/plain/config.sub || {
-        echo "❌ Failed to download config.sub"
-        exit 1
-    }
-    chmod +x config.sub
-    # Why do we even need this?
-fi
-
 # shellcheck disable=SC2034
 {
     set -a
-    # Project/toolchain settings
+
+    SCRIPT_DIR="$(
+        if command -v readlink >/dev/null && readlink -f . >/dev/null 2>&1; then
+            cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd
+        else
+            cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd
+        fi
+    )"
+
+    cd "${SCRIPT_DIR}"
+
+    # Download script to guess the system triplet
+    if [[ ! -x ./GNU/config.guess ]]; then
+        echo "ℹ️  Fetching GNU config.guess..."
+        curl -fsSLo ./GNU/config.guess \
+            https://git.savannah.gnu.org/cgit/config.git/plain/config.guess || {
+            echo "❌ Failed to download config.guess"
+            exit 1
+        }
+        chmod +x ./GNU/config.guess
+    fi
+
+    TARGET=arm-linux-gnueabihf
+    HOST=$(./GNU/config.guess)
+
+    # Set up other project paths
     PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+    SOURCE_ROOT="${PROJECT_ROOT}/source"
+    TOOLCHAIN_ROOT="${PROJECT_ROOT}/toolchain"
 
-    # future expansion
-    # CLIB=[musl|gnu]
-    # TRIPLE=arm-linux-${CLIB}eabihf
+    HOST_INST_DIR="${TOOLCHAIN_ROOT}/install/${HOST}"
+    TGT_INST_DIR="${TOOLCHAIN_ROOT}/install/${TARGET}"
+    BUILD_ROOT="${TOOLCHAIN_ROOT}/build"
+    HOST_SYSROOT="${TOOLCHAIN_ROOT}/sysroot/${HOST}"
+    TGT_SYSROOT="${TOOLCHAIN_ROOT}/sysroot/${TARGET}"
 
-    ARCH=arm
-    CCPREFIX=arm-linux-gnueabihf
-    NPREFIX=$(./config.guess)
-    CROSS_COMPILE=${CCPREFIX}-
-    X_GCC_CONFIG="--with-arch=armv6 \
-  --with-fpu=vfp \
-  --with-float=hard \
-  --with-tune=arm1176jzf-s"
+    HOST_BUILD_DIR="${BUILD_ROOT}/${HOST}"
+    TGT_BUILD_DIR="${BUILD_ROOT}/${TARGET}"
 
-    # Derived paths
-    N_INST_DIR="${PROJECT_ROOT}/toolchain/install/${NPREFIX}"
-    N_BUILD_DIR="${PROJECT_ROOT}/toolchain/build/${NPREFIX}"
-    X_INST_DIR="${PROJECT_ROOT}/toolchain/install/${CCPREFIX}"
-    X_BUILD_DIR="${PROJECT_ROOT}/toolchain/build/${CCPREFIX}"
-    SYSROOT="${PROJECT_ROOT}/toolchain/sysroot/${CROSS_COMPILE}"
-    SOURCE_ROOT="${PROJECT_ROOT}/toolchain/src"
-    BUILD_ROOT="${PROJECT_ROOT}/toolchain/build"
-    LOG_DIR="${PROJECT_ROOT}/toolchain/build/logs"
+    LOG_DIR="${BUILD_ROOT}/logs/$(date +%F[%z\])" # Main logging directory
     mkdir -p "${LOG_DIR}"
 
-    # Tell the download script that we want to install Raspberry Pi kernel headers
-    RPI_KERNEL_HEADERS=yes
+    mkdir -p "${PROJECT_ROOT}/tmp/"
+    TMPDIR=$(mktemp -d -p "${PROJECT_ROOT}/tmp")
+    TEMP="${TMPDIR}"
+    TMP="${TEMP}"
+
+    TGT_CPU=arm
+    TGT_GCC_CONFIG=(
+        --prefix="${TGT_INST_DIR}"
+        --target="${TARGET}"
+        --with-arch=armv6
+        --with-fpu=vfp
+        --with-float=hard
+        --with-tune=arm1176jzf-s
+        --disable-multilib
+        --enable-threads=posix
+        --enable-languages="c,c++"
+        --disable-nls
+        --enable-lto
+        --enable-plugin
+    )
+    HOST_GCC_CONFIG=(
+        --prefix="${HOST_INST_DIR}"
+        --build="${HOST}"
+        --host="${HOST}"
+        --target="${HOST}"
+        --with-gmp="${HOST_INST_DIR}"
+        --with-mpfr="${HOST_INST_DIR}"
+        --with-mpc="${HOST_INST_DIR}"
+        --with-isl="${HOST_INST_DIR}"
+        --with-system-zlib
+        --enable-languages="c,ada,c++,lto,cobol,fortran,go,m2,objc,obj-c++"
+        --enable-shared
+        --enable-threads=posix
+        --enable-__cxa_atexit
+        --enable-clocale=gnu
+        --enable-lto
+        --enable-linker-plugin
+        --enable-default-pie
+        --enable-default-ssp
+        --with-pic
+        --enable-plugin
+        --enable-checking=release
+        --disable-nls
+        --enable-bootstrap
+        --enable-libstdcxx-backtrace
+        --enable-libstdcxx-time=yes
+        --enable-multilib
+    )
+
+    # Raspberry Pi
+    CREATE_RPI_KERNEL_HEADERS=yes
+    KERNEL=kernel
+    DEFCONFIG="bcmrpi_defconfig"
+
     set +a
 }
