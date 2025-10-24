@@ -24,18 +24,18 @@ fi
     cd "${SCRIPT_DIR}"
 
     # Download script to guess the system triplet
-    if [[ ! -x ./GNU/config.guess ]]; then
+    if [[ ! -x ./config.guess ]]; then
         echo "ℹ️  Fetching GNU config.guess..."
-        curl -fsSLo ./GNU/config.guess \
+        curl -fsSLo ./config.guess \
             https://git.savannah.gnu.org/cgit/config.git/plain/config.guess || {
             echo "❌ Failed to download config.guess"
             exit 1
         }
-        chmod +x ./GNU/config.guess
+        chmod +x ./config.guess
     fi
 
     TARGET=arm-linux-gnueabihf
-    HOST=$(./GNU/config.guess)
+    HOST=$(./config.guess)
 
     # Set up other project paths
     PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
