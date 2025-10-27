@@ -87,7 +87,7 @@ download_source() {
     done) "${otherDownloads[@]}"; do
         fname=$(basename "$i")
         if [[ -s "$fname" ]]; then
-            echo "✔️  Already have $fname, skipping"
+            echo "✔️  Already have $fname, skipping download"
         elif [[ $i =~ ^https?:// ]]; then
             downloads_list+=("$i")
         else

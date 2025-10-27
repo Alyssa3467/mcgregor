@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [ "$CREATE_RPI_KERNEL_HEADERS" = "yes" ]; then
 
-    set_window_title Raspberry Pi
+    set_window_title Raspberry Pi Kernel Source
 
     # -------------------------- Download git repository ------------------------- #
     mkdir -p "${PROJECT_ROOT}/raspberrypi" && cd "${PROJECT_ROOT}"
@@ -32,6 +32,7 @@ if [ "$CREATE_RPI_KERNEL_HEADERS" = "yes" ]; then
     )
 
     # -------------------------- Install kernel headers -------------------------- #
+    set_window_title Raspberry Pi Kernel Headers
     cd "${PROJECT_ROOT}/raspberrypi/linux"
     echo "🛠️  Installing Raspberry Pi kernel headers..."
     mkdir -p "${TGT_SYSROOT}/usr" # ensure destination exists
@@ -43,3 +44,4 @@ if [ "$CREATE_RPI_KERNEL_HEADERS" = "yes" ]; then
             -e 's/^  INSTALL \(.*\) - due to target is PHONY$/✔️  Installed headers to \1/'
 
 fi
+echo -e "✔️  Raspberry Pi kernel headers installed.\n"

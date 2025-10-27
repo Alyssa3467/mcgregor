@@ -25,7 +25,7 @@ SCRIPT_DIR="$(
 
 # ---------------------------------------------------------------------------- #
 #                     Clone Raspberry Pi Linux Kernel repo                     #
-#                Install Raspberry Pi headers into $TGT-SYSROOT                #
+#                Install Raspberry Pi headers into $TGT_SYSROOT                #
 # ---------------------------------------------------------------------------- #
 . "${SCRIPT_DIR}"/rpi.sh
 
@@ -35,9 +35,19 @@ SCRIPT_DIR="$(
 . "${SCRIPT_DIR}"/get-verified-tarball.sh
 
 # ---------------------------------------------------------------------------- #
-#                             Prepare Source Files                             #
+#      Extract Linux kernel tarball and install headers into $HOST_SYSROOT     #
+# ---------------------------------------------------------------------------- #
+. "${SCRIPT_DIR}"/host.sh
+
+# ---------------------------------------------------------------------------- #
+#                             Download source files                            #
 # ---------------------------------------------------------------------------- #
 . "${SCRIPT_DIR}"/download_source.sh
+
+# ---------------------------------------------------------------------------- #
+#                             Extract source files                             #
+# ---------------------------------------------------------------------------- #
+. "${SCRIPT_DIR}"/extract_source.sh
 
 # ---------------------------------------------------------------------------- #
 #                              Build native tools                              #

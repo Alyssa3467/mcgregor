@@ -12,3 +12,4 @@ Some of the items I'm starting with:
 Toolchain build script based on [a question posted on Stack Overflow] (https://stackoverflow.com/questions/42022659/how-to-get-a-smaller-toolchain-from-scratch) and various other things I probably should look for and list.
 
 So far, I *think* I have a working build chain script. Next will be compiling OpenWRT against it for the Raspberry Pi Zero W.
+

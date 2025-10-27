@@ -34,7 +34,7 @@ get_verified_tarball() {
 
         TARGET="${SOURCE_ROOT}/linux-${VER}.tar.gz"
         if [[ -f ${TARGET} ]]; then
-            echo "✔️  Already have linux-${VER}.tar.gz, skipping"
+            echo "✔️  Already have linux-${VER}.tar.gz, skipping download"
             exit 0
         fi
 
