@@ -51,8 +51,9 @@ fi
     HOST_BUILD_DIR="${BUILD_ROOT}/${HOST}"
     TGT_BUILD_DIR="${BUILD_ROOT}/${TARGET}"
 
-    LOG_DIR="${BUILD_ROOT}/logs/$(date +%F[%z\])" # Main logging directory
+    LOG_DIR="${PROJECT_ROOT}/logs/$(date +%F[%z\]/%s)" # Main logging directory
     mkdir -p "${LOG_DIR}"
+    ERROR_LOG="${LOG_DIR}/errors.log"
 
     mkdir -p "${PROJECT_ROOT}/tmp/"
     TMPDIR=$(mktemp -d -p "${PROJECT_ROOT}/tmp")
@@ -76,15 +77,9 @@ fi
     )
     HOST_GCC_CONFIG=(
         --prefix="${HOST_INST_DIR}"
-        --build="${HOST}"
-        --host="${HOST}"
         --target="${HOST}"
-        --with-gmp="${HOST_INST_DIR}"
-        --with-mpfr="${HOST_INST_DIR}"
-        --with-mpc="${HOST_INST_DIR}"
-        --with-isl="${HOST_INST_DIR}"
-        --with-system-zlib
-        --enable-languages="c,ada,c++,lto,cobol,fortran,go,m2,objc,obj-c++"
+        --with-zlib="${SOURCE_ROOT}/zlib"
+        --enable-languages="c,c++,lto,cobol,fortran,go,m2,objc,obj-c++"
         --enable-shared
         --enable-threads=posix
         --enable-__cxa_atexit
@@ -97,7 +92,6 @@ fi
         --enable-plugin
         --enable-checking=release
         --disable-nls
-        --enable-bootstrap
         --enable-libstdcxx-backtrace
         --enable-libstdcxx-time=yes
         --enable-multilib

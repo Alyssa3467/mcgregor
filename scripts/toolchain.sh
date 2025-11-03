@@ -2,7 +2,7 @@
 
 # shellcheck disable=2096
 set -ueo pipefail
-
+export DEBUG=omgwtfbbq
 SCRIPT_DIR="$(
     if command -v readlink >/dev/null && readlink -f . >/dev/null 2>&1; then
         cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd
@@ -52,8 +52,10 @@ SCRIPT_DIR="$(
 # ---------------------------------------------------------------------------- #
 #                              Build native tools                              #
 # ---------------------------------------------------------------------------- #
-# . "${SCRIPT_DIR}"/build-native.sh
+debug_msg "Building native tools"
+. "${SCRIPT_DIR}"/build_native.sh
 
+#(maybe put all of these into one file like with the native tools?)
 # ---------------------------------------------------------------------------- #
 #                             Build target binutils                            #
 # ---------------------------------------------------------------------------- #

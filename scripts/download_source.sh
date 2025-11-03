@@ -7,18 +7,24 @@ if ! (return 0 2>/dev/null); then
 fi
 
 download_source() {
-    local BADV6_FILE="${HOME}/.bad_ipv6_hosts"
+    set_window_title "Download source files"
+    debug_msg "start download_source()"
+    local BADV6_FILE="${PROJECT_ROOT}/.bad_ipv6_hosts"
     local normal_urls=()
     local ipv4_urls=()
 
     needs_ipv4() {
         local host="$1"
-        grep -qx "$host" "$BADV6_FILE" 2>/dev/null
+        while IFS= read -r line; do
+            [[ $line == "$host" ]] && return 0
+        done <"$BADV6_FILE" 2>/dev/null
+        return 1
     }
     mark_bad_ipv6() {
         local host="$1"
-        echo "$host" >>"$BADV6_FILE"
-        sort -u -o "$BADV6_FILE" "$BADV6_FILE"
+        if ! needs_ipv4 "$host"; then
+            echo "$host" >>"$BADV6_FILE"
+        fi
     }
     verify_with_keyring() {
         local homedir="$1"
@@ -38,7 +44,6 @@ download_source() {
                 if [[ -n "$key_expiry" ]]; then
                     if [[ "$file_ts" -gt "$key_expiry" ]]; then
                         echo "⚠️  File $base is newer than the key's expiration date ($key_expiry)"
-                        exit 1
                     elif [[ "$file_ts" -lt "$key_expiry" && "$(date +%s)" -gt "$key_expiry" ]]; then
                         echo "ℹ️  Key $keyid is currently expired, but it was valid when $base was signed."
                     fi
@@ -68,7 +73,7 @@ download_source() {
     local GIT_repos=(
         "git://sourceware.org/git/binutils-gdb.git"
         "git://repo.or.cz/isl.git"
-        "git@github.com:madler/zlib.git"
+        "git://github.com/madler/zlib.git"
     )
     local GIT_refs=(
         "binutils-2_45"
@@ -76,29 +81,36 @@ download_source() {
         "master"
     )
     if [[ ${#GIT_repos[@]} -ne ${#GIT_refs[@]} ]]; then
-        echo "❌ Repo and ref arrays are mismatched!" >&2
+        debug_msg "❌ Repo and ref arrays are mismatched!"
         exit 1
     fi
 
     local fname
     local -a downloads_list=()
-    for i in $(for x in "${GNU_mirror_files[@]}"; do
-        echo "${x}" "${x}.sig"
-    done) "${otherDownloads[@]}"; do
-        fname=$(basename "$i")
-        if [[ -s "$fname" ]]; then
-            echo "✔️  Already have $fname, skipping download"
-        elif [[ $i =~ ^https?:// ]]; then
-            downloads_list+=("$i")
-        else
-            downloads_list+=("${GNU_mirror_host}${i}")
-        fi
+    for i in $(
+        for x in "${GNU_mirror_files[@]}"; do
+            echo "${x}" "${x}.sig"
+        done
+    ) "${otherDownloads[@]}"; do
+        {
+            fname=$(basename "$i")
+            if [[ -s "$fname" ]]; then
+                echo "✔️  Already have $fname, skipping download"
+            elif [[ $i =~ ^https?:// ]]; then
+                downloads_list+=("$i")
+            else
+                downloads_list+=("${GNU_mirror_host}${i}")
+            fi
+        }
     done
 
     roll=$((($(od -An -N1 -tu1 /dev/urandom) % 4 + 1) + ($(od -An -N1 -tu1 /dev/urandom) % 4 + 1)))
 
+    debug_msg "Downloading: ${downloads_list[*]}"
+
     for url in "${downloads_list[@]}"; do
-        host=$(printf '%s\n' "$url" | awk -F/ '{print $3}')
+        host="${url#*//}"  # strip scheme (http:// or https://)
+        host="${host%%/*}" # strip everything after first /
         if needs_ipv4 "$host"; then
             ipv4_urls+=("$url")
         else
@@ -108,6 +120,7 @@ download_source() {
 
     {
         if [[ ${#normal_urls[@]} -gt 0 ]]; then
+            debug_msg "Downloading with IPv6 enabled: ${normal_urls[*]}"
             if ! curl --ipv4 \
                 --continue-at - \
                 --retry $((roll + roll)) \
@@ -122,12 +135,16 @@ download_source() {
                 "${normal_urls[@]}"; then
                 # If it fails, retry each individually with IPv4 and mark bad hosts
                 for url in "${normal_urls[@]}"; do
-                    host=$(printf '%s\n' "$url" | awk -F/ '{print $3}')
+                    host="${url#*//}"  # strip scheme (http:// or https://)
+                    host="${host%%/*}" # strip everything after first /
                     if ! curl --remote-time --remote-name --fail --show-error --location "$url"; then
                         echo "❌ $host failed, retrying with IPv4..."
+                        debug_msg "IPv6 failed: $host"
                         if curl --ipv4 --remote-time --remote-name --fail --show-error --location "$url"; then
+                            debug_msg "IPv4 succeeded"
                             mark_bad_ipv6 "$host"
                         else
+                            debug_msg "Download failed for $url"
                             echo "❌ Download failed for $url"
                             exit 1
                         fi
@@ -137,6 +154,7 @@ download_source() {
         fi
 
         if [[ ${#ipv4_urls[@]} -gt 0 ]]; then
+            debug_msg "Downloading with IPv6 disabled: ${ipv4_urls[*]}"
             curl --ipv4 \
                 --continue-at - \
                 --retry $((roll + roll)) \
@@ -155,8 +173,8 @@ download_source() {
     for sig in *.sig; do
         base="${sig%.sig}"
         keyid=$(gpg --list-packets "$sig" | awk '/keyid/ {print $6; exit}')
-        echo 
-        echo "❓ Verifying: $base" | tee -a "${LOG_DIR}/download.log"
+        echo
+        echo "❓ Verifying: $base"
 
         label="local keyring"
         if verify_with_keyring "$HOME/.gnupg/"; then
@@ -191,8 +209,74 @@ download_source() {
         if verify_with_keyring "${KEYRING_DIR}" --no-default-keyring --keyring ./gnu-keyring.gpg; then
             continue
         fi
+        debug_msg "Signature check failed for $base"
         echo "❌ Signature check failed for $base"
         exit 1
+    done
+
+    verify_checksum() {
+        local algo="$1"             # e.g. md5, sha512, sha256
+        local sumfile="${algo}.sum" # e.g. md5.sum
+        local present="present.${algo}"
+
+        if [[ -f "$sumfile" ]]; then
+            # Remove references to other .sum files from this one
+            for other in *.sum; do
+                [[ "$other" == "$sumfile" ]] && continue
+                grep -v "$other" "$sumfile" >"${sumfile}.tmp" && mv "${sumfile}.tmp" "$sumfile"
+            done
+
+            # Pare down to only files that exist locally
+            true >"$present" # clear or create the file
+            while read -r hash fname; do
+                fname="${fname#\*}" # strip leading *
+                [[ -e $fname ]] && echo "$hash $fname" >>"$present"
+            done <"$sumfile"
+
+            echo "Checking ${algo^^} checksum"
+            if [[ -s "$present" ]] && grep -q '[^[:space:]]' "$present"; then
+                "${algo}sum" --ignore-missing -c "$present" || exit 1
+            else
+                echo "ℹ️ No ${algo^^} entries to check"
+            fi
+        else
+            echo "ℹ️ No $sumfile file found, skipping ${algo^^} check"
+        fi
+    }
+
+    echo
+    for sumfile in *.sum; do
+        algo="${sumfile%.sum}"
+        verify_checksum "$algo"
+        echo
+    done
+
+    # Handle git repos
+    for ((i = 0; i < ${#GIT_repos[@]}; i++)); do
+        url="${GIT_repos[i]}"
+        ref="${GIT_refs[i]}"
+        dir=$(basename "$url" .git)
+
+        if [[ -d "$dir/.git" ]]; then
+            (
+                echo "✔️ Repo $dir already cloned"
+                (cd "$dir" && git fetch origin && (git checkout -B "$ref" "origin/$ref" ||
+                    git checkout "$ref"))
+            )
+        else
+            echo "⬇️ Cloning $url at $ref"
+            (
+                git clone "$url" "$dir"
+                if (cd "$dir" && git checkout -B "$ref" "origin/$ref"); then
+                    :
+                else
+                    (cd "$dir" && git checkout "$ref")
+                fi
+            )
+        fi
+        (cd "$dir" && git submodule update --init --recursive)
+        debug_msg "Did the thing with $url"
+        echo
     done
 }
 

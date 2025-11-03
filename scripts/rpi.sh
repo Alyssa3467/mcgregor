@@ -3,6 +3,8 @@ set -euo pipefail
 
 if [ "$CREATE_RPI_KERNEL_HEADERS" = "yes" ]; then
 
+debug_msg "Raspberry Pi kernel"
+
     set_window_title Raspberry Pi Kernel Source
 
     # -------------------------- Download git repository ------------------------- #
@@ -12,19 +14,19 @@ if [ "$CREATE_RPI_KERNEL_HEADERS" = "yes" ]; then
         SUBMODULE_URL="git@github.com:raspberrypi/linux"
         # If .gitmodules references the path, update/init; otherwise add it.
         if git config --file .gitmodules --get-regexp "submodule\..*\.path" | awk '{print $2}' 2>/dev/null | grep -xq -- "${SUBMODULE_PATH}"; then
-            echo "✔️  Submodule already configured at ${SUBMODULE_PATH}; updating..."
+            debug_msg "✔️  Submodule already configured at ${SUBMODULE_PATH}; updating..."
             git submodule update --init --recursive "${SUBMODULE_PATH}" || {
-                echo "git submodule update failed" >&2
+                debug_msg "git submodule update failed" >&2
                 exit 128
             }
         else
             echo "Adding submodule ${SUBMODULE_URL} at ${SUBMODULE_PATH}..."
             git submodule add "${SUBMODULE_URL}" "${SUBMODULE_PATH}" ||
                 {
-                    echo "git submodule add failed, trying update --init..." >&2
+                    debug_msg "git submodule add failed, trying update --init..." >&2
                     git submodule update --init --recursive "${SUBMODULE_PATH}" ||
                         {
-                            echo "submodule setup failed"
+                            debug_msg "submodule setup failed"
                             exit 128 >&2
                         }
                 }
@@ -45,3 +47,4 @@ if [ "$CREATE_RPI_KERNEL_HEADERS" = "yes" ]; then
 
 fi
 echo -e "✔️  Raspberry Pi kernel headers installed.\n"
+debug_msg "Raspberry Pi kernel headers installed"

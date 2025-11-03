@@ -9,7 +9,8 @@ set -ueo pipefail
 
 # shellcheck disable=SC2120
 ACP121_ZONE() {
-    if [[ $1 = "J" ]]; then
+    local zone=${1:-}
+    if [[ ${zone} = "J" ]]; then
         # Local Time, but then running this is rather pointless since you can simply type "J"
         echo "J"
         return 0
@@ -21,8 +22,8 @@ ACP121_ZONE() {
         echo "Invalid number of parameters specified" >&2
         code=$(($# % 255))
         return "${code}"
-    elif [[ -z "$1" ]]; then
-        raw=$(date +%:::z)
+    elif [[ -z "${1:-}" ]]; then
+        offset=$(date +%-:::z)
     elif [[ $1 =~ ^[🪨📄✂️]$ ]]; then
         passed=9
         case "$1" in
@@ -49,8 +50,6 @@ ACP121_ZONE() {
         raw=$1
     fi
 
-    hours=${raw%%:*}       # "-07"
-    offset=$((hours))      # → -7
     index=$((offset + 12)) # map to 0..26
     # This is your captain speaking. Copilot has been helpful, but... WTF, mate?
     # TODO: Stay away from areas with non-integer offsets 😆
@@ -70,7 +69,6 @@ timestamp() {
                 "-----------------------------------------------------------"
             ;;
         perfectdate)
-
             echo "2063-04-25: "
             ;;
     esac
@@ -84,9 +82,18 @@ debug_msg() {
         return 0
     fi
 
-    (
-        mkdir -p "${LOG_DIR}/debug"
-        LOGFILE="${LOG_DIR}/debug/log.txt"
-        echo "$(timestamp) - ${FUNCNAME[1]} - $*" | tee -a "${LOGFILE}" 2>&1
-    )
+    echo "$(timestamp) - ${FUNCNAME[1]} - $*" | tee -a "${LOGFILE}" >&2
+}
+
+# First Run
+{
+    flag=${DEBUG:-}
+    # If DEBUG is set at all, turn debugging messages on
+    if [[ -z $flag ]]; then
+        return 0
+    fi
+
+    mkdir -p "${LOG_DIR}/"
+    LOGFILE="${LOG_DIR}/debug.log"
+    echo "$(timestamp withdate) - ${FUNCNAME[1]:-init_logging} - $*" | tee -a "${LOGFILE}" >&2
 }

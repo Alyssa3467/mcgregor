@@ -7,6 +7,8 @@ fi
 
 get_verified_tarball() {
     (
+        set_window_title "Linux kernel source"
+        debug_msg "Downloading Linux kernel source"
         GPGBIN=$(command -v gpg)
         GPGVBIN=$(command -v gpgv)
         SHA256SUMBIN=$(command -v sha256sum)
@@ -122,6 +124,7 @@ get_verified_tarball() {
         mv -f "${TGZFILE}" "${TARGET}"
         echo
         echo "Successfully downloaded and verified ${TARGET}"
+        debug_msg "Linux kernel source downloaded and verified"
     )
 }
 

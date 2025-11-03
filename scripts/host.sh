@@ -3,6 +3,7 @@ set -euo pipefail
 
 cd "${SOURCE_ROOT}"
 (
+    debug_msg "Linux kernel headers"
     TARBALL=$(find . -maxdepth 1 -name 'linux-*.tar.gz' | sort -V | tail -n1)
     [[ -n $TARBALL ]] || {
         debug_msg "❌ No linux-*.tar.gz tarball found in ${SOURCE_ROOT}"
@@ -27,5 +28,7 @@ cd "${SOURCE_ROOT}"
                 -e 's/^  INSTALL \(.*\) - due to target is PHONY$/✔️  Installed headers to \1/'
 
     )
+    mkdir -p "${HOST_SYSROOT}/usr/lib"
     echo -e "✔️  Host kernel headers installed.\n"
+    debug_msg "Linux kernel headers installed"
 )

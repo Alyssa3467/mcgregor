@@ -31,11 +31,14 @@ add_exit_handler() {
 }
 run_exit_handlers() {
     for handler in "${EXIT_HANDLERS[@]}"; do
-        eval "$handler" || echo -e "oops\n${handler} went rogue" >&2
+        eval "$handler" || echo -e "${handler} exited with code $?" >&2
     done
 }
 
 cleanup() {
+    status=$?
+    cmd=$BASH_COMMAND
+    echo "[EXIT] status=$status, last command: \"$cmd\""
     if [[ -n "${PROJECT_ROOT:-}" && -d "${PROJECT_ROOT}/tmp" ]]; then
         rm -rf "${PROJECT_ROOT}/tmp"
     fi
@@ -145,20 +148,24 @@ build_prep() {
     fi
     mkdir -p "$target_dir"
 
-    # use the directory name as part of the environment dump filename
-    local dir_name
-    dir_name="${target_dir##*/}"
+    local flag=${DEBUG:-}
 
-    # ------------------------ Capture the environment ----------------------- #
-    local log_file
-    log_file="${LOG_DIR}/prep-${dir_name}-env-dump.log"
-    echo timestamp | tee -a "$log_file" >/dev/null
-    env | sort | tee -a "$log_file" >/dev/null
+    # If DEBUG is set at all, log the current environment
+    if [[ ! -z $flag ]]; then
+        # use the directory name as part of the environment dump filename
+        local dir_name
+        dir_name="${target_dir##*/}"
 
+        # ------------------------ Capture the environment ----------------------- #
+        local log_file
+
+        log_file="${LOG_DIR}/prep-${dir_name}-env-dump.log"
+        echo -e "\n$(timestamp)\n" | tee -a "$log_file" >/dev/null
+        env | sort | tee -a "$log_file" >/dev/null
+    fi
     # change to the new directory
     cd "$target_dir" || return 1
-    # echo the target directory name in case some fool wants to do "cd $(build_prep)"
-    echo "${target_dir}"
+    # echo the target directory name in case some fool wants to do "cd $(build_prep <target_dir>)"
 }
 
 # -------------------------------------------------------- #
@@ -188,7 +195,7 @@ refresh_path() {
 # -------------------------------------------------------- #
 #       Starts "make -jN" and lowers N until it works      #
 # -------------------------------------------------------- #
-parallel_make_rampdown() {
+parallel_make() {
     # Require LOG_DIR to be set
     if [[ -z "$LOG_DIR" ]]; then
         echo "💥 LOG_DIR is not set. Where exactly do you expect me to put the logs, a fire pit?" >&2
@@ -237,9 +244,8 @@ parallel_make_rampdown() {
         ((nextjobs < 1)) && nextjobs=1
 
         # Prepare log file
-        logname="${LOG_DIR}/$(date -u '+%Y%m%dT%H%M%SZ')-${safe_label}-${attempt}.log"
+        logname="${LOG_DIR}/${safe_label}-${attempt}.log"
         rm -f "$logname"
-
         echo -e "🔧 Attempt $attempt: make -j$jobs ${args[*]}\n" | tee -a "$logname"
 
         if make -j"$jobs" "${args[@]}" 2>&1 | tee -a "$logname"; then
@@ -265,6 +271,7 @@ parallel_make_rampdown() {
             fi
 
             echo "⚠️ Build failed with \"-j$jobs\", retrying with \"-j$nextjobs\" in 3 seconds..."
+            debug_msg "make ${safe_label} failed"
             sleep 3
         fi
 
@@ -365,4 +372,51 @@ fi
     trap run_exit_handlers EXIT
 
     add_exit_handler cleanup
+}
+
+verify_artifacts() {
+    set -x
+    local label="$1"
+    shift
+    local missing=0
+    local ts
+    ts="$(timestamp)"
+
+    echo "🔍 Verifying artifacts for: $label"
+
+    for file in "$@"; do
+        if [[ ! -e "$file" ]]; then
+            echo "${ts} ⚠️ Warning: Missing expected file: $file" | tee -a "$ERROR_LOG" >&2
+            ((++missing))
+        else
+            echo "✅ Found: $file"
+        fi
+    done
+
+    if ((missing > 0)); then
+        echo "${ts} ⚠️ $missing artifact(s) missing for $label. See ${ERROR_LOG} for details." | tee -a "$ERROR_LOG" >&2
+    else
+        echo "✅ All expected artifacts for $label are present."
+    fi
+    set +x
+}
+
+# Run a command with xtrace enabled, then restore the previous state
+verbose() {
+    set -x
+    "$@"
+    local status=$?
+    set +x
+    debug_msg "($*) returned with status $status" >&2
+    return $status
+}
+
+# Run a command with errexit disabled, then restore it
+YOLO() {
+    set +e
+    "$@"
+    local status=$?
+    set -e
+    debug_msg "($*) returned with status $status" >&2
+    return $status
 }
