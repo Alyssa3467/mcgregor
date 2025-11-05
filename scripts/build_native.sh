@@ -9,22 +9,20 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
-# ---------------------------------------------------------------------------- #
-#                                  Build zlib                                  #
-# ---------------------------------------------------------------------------- #
-build_prep "${HOST_BUILD_DIR}/zlib"
-set_window_title "Building zlib"
-"${SOURCE_ROOT}/zlib/configure" --prefix="${HOST_INST_DIR}"
-parallel_make test
-parallel_make
-parallel_make install
-verify_artifacts "zlib" \
-    "${HOST_INST_DIR}/lib/libz.a" \
-    "${HOST_INST_DIR}/lib/libz.so"
+# Build zlib
+build_zlib() {
+    build_prep "zlib"
+    set_window_title "Building zlib"
+    "${SOURCE_ROOT}/zlib/configure" --prefix="${HOST_INST_DIR}"
+    parallel_make test
+    parallel_make
+    parallel_make install
+    verify_artifacts "zlib" \
+        "${HOST_INST_DIR}/lib/libz.a" \
+        "${HOST_INST_DIR}/lib/libz.so"
+}
 
-# ---------------------------------------------------------------------------- #
-#                                Build binutils                                #
-# ---------------------------------------------------------------------------- #
+# Build binutils
 
 (
     set_window_title "Building native binutils"
@@ -43,11 +41,10 @@ verify_artifacts "zlib" \
     fi
 
     "${SRC_DIR}/configure" \
+        --program-prefix="${HOST}-" \
         --prefix="${HOST_INST_DIR}" \
         --with-sysroot="${HOST_SYSROOT}" \
         --target="${HOST}" \
-        --build="${HOST}" \
-        --host="${HOST}" \
         --disable-nls \
         --disable-werror \
         --disable-multilib
@@ -62,19 +59,20 @@ verify_artifacts "zlib" \
 )
 export PATH="${HOST_INST_DIR}/bin:${PATH}"
 
-# ---------------------------------------------------------------------------- #
-#                       Build native GCC Stage 1, Part A                       #
-# ---------------------------------------------------------------------------- #
+# Build native GCC Stage 1, Part A
+
 (
     debug_msg "Build native GCC Stage 1"
     set_window_title "Building native GCC, Part 1A"
     build_prep "${HOST_BUILD_DIR}/gcc-stage-1"
 
     SRC_DIR=$(find "${SOURCE_ROOT}" -maxdepth 1 -type d -name 'gcc-[0-9]*' | sort | head -n1)
-    "${SRC_DIR}/configure" \
+
+    debug_msg "${SRC_DIR}/configure starting"
+
+    set -x
+    clean_shell "${SRC_DIR}/configure" \
         --prefix="${HOST_INST_DIR}" \
-        --build="${HOST}" \
-        --host="${HOST}" \
         --target="${HOST}" \
         --with-sysroot="${HOST_SYSROOT}" \
         --with-target-system-zlib \
@@ -87,19 +85,19 @@ export PATH="${HOST_INST_DIR}/bin:${PATH}"
         --disable-libgomp \
         --disable-libssp \
         --disable-libvtv \
-        --without-headers
+        --without-headers \
+        --with-newlib
 
     parallel_make all-gcc
     parallel_make install-gcc
     verify_artifacts "gcc-stage1" \
         "${HOST_INST_DIR}/bin/${HOST}-gcc"
-
+    set +x
     debug_msg "Finished"
 )
 
-# ---------------------------------------------------------------------------- #
-#                          Build native glibc, Part 1                          #
-# ---------------------------------------------------------------------------- #
+# Build native glibc, Part 1
+
 (
     debug_msg "Build native glibc"
     set_window_title "Building native glibc, Part 1"
@@ -133,9 +131,8 @@ export PATH="${HOST_INST_DIR}/bin:${PATH}"
     debug_msg "finished"
 )
 
-# ---------------------------------------------------------------------------- #
-#                       Build native GCC Stage 1, Part B                       #
-# ---------------------------------------------------------------------------- #
+# Build native GCC Stage 1, Part B
+
 set_window_title "Building native GCC, Part 1B"
 debug_msg "Native GCC, Part 1B"
 cd "${HOST_BUILD_DIR}/gcc-stage-1"
@@ -145,9 +142,8 @@ verify_artifacts "libgcc" \
     "${HOST_SYSROOT}/usr/lib/libgcc_s.so" \
     "${HOST_SYSROOT}/usr/lib/libgcc.a"
 
-# ---------------------------------------------------------------------------- #
-#                          Build native glibc, Part 2                          #
-# ---------------------------------------------------------------------------- #
+# Build native glibc, Part 2
+
 set_window_title "Building native glibc, Part 2"
 debug_msg "Native glibc, Part 2"
 cd "${HOST_BUILD_DIR}/glibc"
@@ -166,9 +162,8 @@ verify_artifacts "glibc-stage2" \
 #         ;;
 # esac
 
-# ---------------------------------------------------------------------------- #
-#                           Build native GCC Stage 2                           #
-# ---------------------------------------------------------------------------- #
+# Build native GCC Stage 2
+
 (
     set_window_title "Building native GCC, Part 2"
     debug_msg "Build native GCC Stage 2"
@@ -181,3 +176,6 @@ verify_artifacts "glibc-stage2" \
         "${HOST_INST_DIR}/bin/${HOST}-gcc" \
         "${HOST_INST_DIR}/bin/${HOST}-g++"
 )
+
+# ---------------- Where Things Are Actually Called --------------- #
+native_build_env

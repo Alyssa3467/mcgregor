@@ -1,8 +1,10 @@
 #!/usr/bin/env -iS PATH=/usr/bin:/bin HOME="${HOME}" USER="${USER}" TERM=xterm-256color LANG=C bash
 
 # shellcheck disable=2096
+# TODO: Convert to Makefile
 set -ueo pipefail
-export DEBUG=omgwtfbbq
+export DEBUG=omgwtfbbq 
+
 SCRIPT_DIR="$(
     if command -v readlink >/dev/null && readlink -f . >/dev/null 2>&1; then
         cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd
@@ -52,7 +54,6 @@ SCRIPT_DIR="$(
 # ---------------------------------------------------------------------------- #
 #                              Build native tools                              #
 # ---------------------------------------------------------------------------- #
-debug_msg "Building native tools"
 . "${SCRIPT_DIR}"/build_native.sh
 
 #(maybe put all of these into one file like with the native tools?)

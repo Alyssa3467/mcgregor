@@ -38,11 +38,16 @@ run_exit_handlers() {
 cleanup() {
     status=$?
     cmd=$BASH_COMMAND
-    echo "[EXIT] status=$status, last command: \"$cmd\""
+    echo "[EXIT] status=$status, last command: \"$cmd\"" >&2 | tee -a "${ERROR_LOG}"
     if [[ -n "${PROJECT_ROOT:-}" && -d "${PROJECT_ROOT}/tmp" ]]; then
         rm -rf "${PROJECT_ROOT}/tmp"
     fi
     echo "so long and thanks for all the fish" >&2
+}
+
+curl_wrapper() {
+    # Just a thin shim around curl with basic failure handling
+    curl --fail --silent --show-error "$@"
 }
 
 # ---------------------------------------------------------------------------- #
@@ -59,7 +64,7 @@ lotto() {
         # Get 5 numbers from random.org (1–70), sorted
         nums=$(curl_wrapper -s "https://www.random.org/integers/?num=5&min=1&max=70&col=1&base=10&format=plain&rnd=new")
         readarray -t arr <<<"$nums"
-        sorted_org=$(for i in "${arr[@]}"; do echo "$i"; done | (LC_ALL=vn_VN sort -n))
+        sorted_org=$(for i in "${arr[@]}"; do echo "$i"; done | (LC_ALL=C sort -n))
 
         # Get 1 number from random.org (1–25)
         sixth=$(curl_wrapper -s "https://www.random.org/integers/?num=1&min=1&max=25&col=1&base=10&format=plain&rnd=new")
@@ -73,7 +78,7 @@ lotto() {
             num=$((($(od -An -N2 -tu2 </dev/urandom) % 70) + 1))
             ur_arr+=("$num")
         done
-        sorted_ur=$(for i in "${ur_arr[@]}"; do echo "$i"; done | (LC_ALL=vn_VN sort -n))
+        sorted_ur=$(for i in "${ur_arr[@]}"; do echo "$i"; done | (LC_ALL=C sort -n))
 
         # Get 1 number from /dev/urandom (1–25)
         sixth_ur=$((($(od -An -N2 -tu2 </dev/urandom) % 25) + 1))
@@ -101,7 +106,8 @@ lotto() {
 #   --no-wipe    Optional flag. If provided, the function will NOT delete
 #                the contents of <target_dir>. Instead, it will preserve
 #                whatever is already there.
-#   <target_dir> Required. The path to the directory that should be prepared.
+#   <target_dir> Required. The name of the directory that should be prepared.
+#                The new directory will be under ${BUILD_ROOT}
 #
 # Behavior:
 #   - Validates arguments and prints usage on error.
@@ -109,15 +115,17 @@ lotto() {
 #   - If --no-wipe is given, preserves existing contents.
 #   - Creates the directory if it does not exist.
 #   - Logs the current environment variables to $LOG_DIR for reproducibility.
-#   - Prints the target directory path so callers can use command substitution.
 build_prep() {
     local no_wipe=false
     local target_dir=""
+    local nonflag_count=0
+    local last_component sanitized
 
+    # Thy must choose only one <target_dir>
     # The number of parameters shall be no more than 2.
-    # Thou cannot even, so zero is not allowed.
+    # Before 2, thou cannot even, so zero is not allowed.
     # Three is right out. Under no condition shall thou reach 5.
-    # A negative number has roots only within thine imagination.
+    # A negative number has square roots only within thine imagination.
     if (($# < 1 || $# > 2)); then
         echo "Usage: build_prep [--no-wipe] <target_dir>" >&2
         return 1
@@ -132,16 +140,45 @@ build_prep() {
     for arg in "$@"; do
         case "$arg" in
             --no-wipe) no_wipe=true ;;
-            *) target_dir="$arg" ;;
+            *)
+                target_dir="$arg"
+                ((++nonflag_count))
+                ;;
         esac
     done
 
-    # Ensure a target directory was actually specified
+    # Explicitly reject two non‑flag arguments
+    if ((nonflag_count > 1)); then
+        echo "Error: only one non-flag argument (target_dir) is allowed." >&2
+        return 1
+    fi
+
     if [[ -z "$target_dir" ]]; then
         echo "Error: target_dir is required." >&2
         return 1
     fi
 
+    # Extract final component
+    last_component="${target_dir##*/}"
+
+    sanitized=$(echo "$last_component" | tr -d '\000-\037' | tr '/\\:*?"<>|' '_')
+
+    # Handle reserved Windows device names
+    case "$sanitized" in
+        CON | PRN | AUX | NUL | COM[1-9] | LPT[1-9])
+            sanitized="_${sanitized}"
+            ;;
+    esac
+
+    # Detect multiple path components
+    # Rule: only "path" or "/path" is considered a single component
+    if [[ "$target_dir" == */* ]]; then
+        write_log_msg --std --level=1 "Multiple path components detected; only the last will be used: $sanitized"
+    else
+        write_log_msg --std --level=0 echo "Using: $sanitized"
+    fi
+
+    target_dir=${BUILD_ROOT}/${sanitized}
     # Erase what's there and create a fresh new directory unless told otherwise
     if [[ "$no_wipe" == false ]]; then
         rm -rf "$target_dir"
@@ -149,23 +186,18 @@ build_prep() {
     mkdir -p "$target_dir"
 
     local flag=${DEBUG:-}
-
+    # TODO: different reporting levels?
     # If DEBUG is set at all, log the current environment
-    if [[ ! -z $flag ]]; then
-        # use the directory name as part of the environment dump filename
-        local dir_name
-        dir_name="${target_dir##*/}"
+    if [[ -n $flag ]]; then
 
-        # ------------------------ Capture the environment ----------------------- #
+        # Capture the environment
         local log_file
-
-        log_file="${LOG_DIR}/prep-${dir_name}-env-dump.log"
-        echo -e "\n$(timestamp)\n" | tee -a "$log_file" >/dev/null
+        log_file="${LOG_DIR}/prep-${sanitized}-env-dump.log"
+        echo -e "\n$(timestamp withdate)\n" | tee -a "$log_file" >/dev/null
         env | sort | tee -a "$log_file" >/dev/null
     fi
-    # change to the new directory
+
     cd "$target_dir" || return 1
-    # echo the target directory name in case some fool wants to do "cd $(build_prep <target_dir>)"
 }
 
 # -------------------------------------------------------- #
@@ -321,7 +353,7 @@ rand_delay() {
             d2=$(($(od -An -N1 -tu1 </dev/urandom) % 10))
             d3=$(($(od -An -N1 -tu1 </dev/urandom) % 10))
             time="0.$d1$d2$d3"
-            if ((time == 0)); then time=1; fi
+            if [[ "$time" == "0.000" ]]; then time=1; fi
         fi
         sleep "${time}"
     fi
@@ -375,7 +407,6 @@ fi
 }
 
 verify_artifacts() {
-    set -x
     local label="$1"
     shift
     local missing=0
@@ -386,7 +417,7 @@ verify_artifacts() {
 
     for file in "$@"; do
         if [[ ! -e "$file" ]]; then
-            echo "${ts} ⚠️ Warning: Missing expected file: $file" | tee -a "$ERROR_LOG" >&2
+            echo "${ts} - [${label}] - ⚠️ Warning: Missing expected file: $file" | tee -a "$ERROR_LOG" >&2
             ((++missing))
         else
             echo "✅ Found: $file"
@@ -394,11 +425,27 @@ verify_artifacts() {
     done
 
     if ((missing > 0)); then
-        echo "${ts} ⚠️ $missing artifact(s) missing for $label. See ${ERROR_LOG} for details." | tee -a "$ERROR_LOG" >&2
+        echo "${ts} - [${label}] - ⚠️ $missing artifact(s) missing for $label." | tee -a "$ERROR_LOG" >&2
     else
         echo "✅ All expected artifacts for $label are present."
     fi
-    set +x
+
+    # Extra check only if label starts with "gcc-"
+    if [[ $label == gcc-* ]]; then
+        local cc="${HOST_INST_DIR}/bin/${HOST}-gcc"
+        local sysroot
+        sysroot="$($cc -print-sysroot 2>/dev/null)"
+        local crtbegin
+        crtbegin="$($cc -print-file-name=crtbegin.o 2>/dev/null)"
+
+        if [ -z "$sysroot" ]; then
+            echo "${ts} ❌ $label: compiler did not report a sysroot" | tee -a "$ERROR_LOG" >&2
+        elif [ "$crtbegin" = "crtbegin.o" ] || [ ! -f "$crtbegin" ]; then
+            echo "${ts} ❌ $label: compiler cannot locate crtbegin.o (sysroot=$sysroot)" | tee -a "$ERROR_LOG" >&2
+        else
+            echo "✅ $label: sysroot=$sysroot, crtbegin.o found at $crtbegin"
+        fi
+    fi
 }
 
 # Run a command with xtrace enabled, then restore the previous state
@@ -419,4 +466,28 @@ YOLO() {
     set -e
     debug_msg "($*) returned with status $status" >&2
     return $status
+}
+
+# TODO: get rid of this
+printsomestuff() {
+    set -x
+    find "${TOOLCHAIN_ROOT}" -name "crtbegin.o"
+    echo
+    echo "HOST_INST_DIR: ${HOST_INST_DIR}"
+    echo "HOST_SYSROOT: ${HOST_SYSROOT}"
+    # Microsoft Copilot needs to stop being so fucking condescending
+    set +x
+}
+add_exit_handler printsomestuff
+
+clean_shell() {
+    if [ $# -eq 0 ]; then
+        echo "clean_shell: command required" >&2
+        return 1
+    fi
+    env -i \
+        HOME="$HOME" \
+        TERM="${TERM:-xterm}" \
+        PATH="/usr/bin:/bin" \
+        "$@"
 }

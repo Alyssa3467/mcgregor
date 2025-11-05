@@ -19,7 +19,7 @@ fi
 
     set +a
 }
-
+echo "$(timestamp withdate) Begin GPG Logs" | tee -a "${GPG_LOG_FILE}"
 mkdir -p "$KEYRING_DIR" "$LOG_DIR"
 chmod 700 "$KEYRING_DIR"
 cd "$KEYRING_DIR"
