@@ -33,6 +33,15 @@ fi
         }
         chmod +x ./config.guess
     fi
+    if [[ ! -x ./config.sub ]]; then
+        echo "ℹ️  Fetching GNU config.sub..."
+        curl -fsSLo ./config.sub \
+            https://git.savannah.gnu.org/cgit/config.git/plain/config.sub || {
+            echo "❌ Failed to download config.sub"
+            exit 1
+        }
+        chmod +x ./config.sub
+    fi
 
     PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
     SOURCE_ROOT="${PROJECT_ROOT}/source"
@@ -46,10 +55,23 @@ fi
 
     native_build_env() {
         set -a
-        HOST=$(./config.guess)
+        # HOST=$("${SCRIPT_DIR}"/config.guess "$(uname -m)")
+        local which_gcc
+        which_gcc=$(command -v gcc)
+        HOST=$("${SCRIPT_DIR}"/config.guess "$(${which_gcc} -dumpmachine)")
+
         HOST_INST_DIR="${TOOLCHAIN_ROOT}/install/${HOST}"
         HOST_SYSROOT="${TOOLCHAIN_ROOT}/sysroot/${HOST}"
         HOST_BUILD_DIR="${BUILD_ROOT}/${HOST}"
+        (
+            for j in ${HOST_INST_DIR} ${HOST_SYSROOT} ${HOST_BUILD_DIR}; do
+                mkdir -p "$j"
+            done
+        ) || (
+            write_log_msg --level=4 --err "Error creating ${HOST} working directories"
+            exit 1
+        )
+
         HOST_GCC_CONFIG=(
             --prefix="${HOST_INST_DIR}"
             --target="${HOST}"

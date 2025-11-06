@@ -2,8 +2,19 @@
 
 # shellcheck disable=2096
 # TODO: Convert to Makefile
-set -ueo pipefail
-export DEBUG=omgwtfbbq 
+set -ueox pipefail
+export LOG_LEVEL=0
+
+# open FD 3 to a line-unbuffered consumer that wraps each line in cyan
+exec 3> >(sed -u $'s/.*/\033[36m&\033[0m/')
+
+export BASH_XTRACEFD=3
+
+_cleanup_xtrace() {
+  exec 3>&- || true
+}
+trap _cleanup_xtrace EXIT
+
 
 SCRIPT_DIR="$(
     if command -v readlink >/dev/null && readlink -f . >/dev/null 2>&1; then
@@ -17,13 +28,10 @@ SCRIPT_DIR="$(
 #                Set up additional build environment parameters                #
 # ---------------------------------------------------------------------------- #
 . "${SCRIPT_DIR}"/env.sh
-. "${SCRIPT_DIR}"/gpg_settings.sh
-
-# ---------------------------------------------------------------------------- #
-#                     Set up logging and "helper" functions                    #
-# ---------------------------------------------------------------------------- #
 . "${SCRIPT_DIR}"/logging.sh
 . "${SCRIPT_DIR}"/ancillary.sh
+. "${SCRIPT_DIR}"/gpg_settings.sh
+. "${SCRIPT_DIR}"/pre-build.sh # functions to set up a build environment
 
 # ---------------------------------------------------------------------------- #
 #                     Clone Raspberry Pi Linux Kernel repo                     #

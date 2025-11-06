@@ -8,7 +8,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "⚠️ This script should be sourced, not executed."
     exit 1
 fi
-
+native_build_env
 # Build zlib
 build_zlib() {
     build_prep "zlib"
@@ -26,8 +26,8 @@ build_zlib() {
 
 (
     set_window_title "Building native binutils"
-    debug_msg "Start building native binutils"
-    build_prep "${HOST_BUILD_DIR}/binutils"
+    write_log_msg "Start building native binutils"
+    build_prep "${HOST}" "${HOST_BUILD_DIR}/binutils"
 
     SRC_TARBALL=$(find "${SOURCE_ROOT}" -maxdepth 1 -type d -name 'binutils-[0-9]*' | sort | head -n1)
 
@@ -55,23 +55,23 @@ build_zlib() {
         "${HOST_INST_DIR}/bin/${HOST}-ld" \
         "${HOST_INST_DIR}/bin/${HOST}-as"
 
-    debug_msg "Finished"
+    write_log_msg "Finished"
 )
 export PATH="${HOST_INST_DIR}/bin:${PATH}"
 
 # Build native GCC Stage 1, Part A
 
 (
-    debug_msg "Build native GCC Stage 1"
+    write_log_msg "Build native GCC Stage 1"
     set_window_title "Building native GCC, Part 1A"
-    build_prep "${HOST_BUILD_DIR}/gcc-stage-1"
+    build_prep "${HOST} ${HOST_BUILD_DIR}"/gcc-stage-1
 
     SRC_DIR=$(find "${SOURCE_ROOT}" -maxdepth 1 -type d -name 'gcc-[0-9]*' | sort | head -n1)
 
-    debug_msg "${SRC_DIR}/configure starting"
+    write_log_msg "${SOURCE_ROOT}/configure starting"
 
     set -x
-    clean_shell "${SRC_DIR}/configure" \
+    clean_shell "${SOURCE_ROOT}/configure" \
         --prefix="${HOST_INST_DIR}" \
         --target="${HOST}" \
         --with-sysroot="${HOST_SYSROOT}" \
@@ -93,19 +93,19 @@ export PATH="${HOST_INST_DIR}/bin:${PATH}"
     verify_artifacts "gcc-stage1" \
         "${HOST_INST_DIR}/bin/${HOST}-gcc"
     set +x
-    debug_msg "Finished"
+    write_log_msg "Finished"
 )
 
 # Build native glibc, Part 1
 
 (
-    debug_msg "Build native glibc"
+    write_log_msg "Build native glibc"
     set_window_title "Building native glibc, Part 1"
-    build_prep "${HOST_BUILD_DIR}/glibc"
+    build_prep "${HOST} ${HOST_BUILD_DIR}"/glibc
 
     SRC_DIR=$(find "${SOURCE_ROOT}" -maxdepth 1 -type d -name 'glibc-[0-9]*' | sort | head -n1)
     test -d "${SRC_DIR}" || {
-        debug_msg "❌ No glibc source found"
+        write_log_msg --err --level=4 "❌ No glibc source found"
         exit 1
     }
 
@@ -128,13 +128,13 @@ export PATH="${HOST_INST_DIR}/bin:${PATH}"
         "${HOST_SYSROOT}/usr/lib/crt1.o" \
         "${HOST_SYSROOT}/usr/lib/libc.so"
 
-    debug_msg "finished"
+    write_log_msg "finished"
 )
 
 # Build native GCC Stage 1, Part B
 
 set_window_title "Building native GCC, Part 1B"
-debug_msg "Native GCC, Part 1B"
+write_log_msg "Native GCC, Part 1B"
 cd "${HOST_BUILD_DIR}/gcc-stage-1"
 parallel_make all-target-libgcc
 parallel_make install-target-libgcc DESTDIR="${HOST_SYSROOT}"
@@ -145,7 +145,7 @@ verify_artifacts "libgcc" \
 # Build native glibc, Part 2
 
 set_window_title "Building native glibc, Part 2"
-debug_msg "Native glibc, Part 2"
+write_log_msg "Native glibc, Part 2"
 cd "${HOST_BUILD_DIR}/glibc"
 parallel_make
 parallel_make install DESTDIR="${HOST_SYSROOT}"
@@ -166,8 +166,8 @@ verify_artifacts "glibc-stage2" \
 
 (
     set_window_title "Building native GCC, Part 2"
-    debug_msg "Build native GCC Stage 2"
-    build_prep "${HOST_BUILD_DIR}/gcc-stage-2"
+    write_log_msg "Build native GCC Stage 2"
+    build_prep "${HOST}""${HOST_BUILD_DIR}"/gcc-stage-2
     SRC_DIR=$(find "${SOURCE_ROOT}" -maxdepth 1 -type d -name 'gcc-[0-9]*' | sort | head -n1)
     "${SRC_DIR}/configure" "${HOST_GCC_CONFIG[@]}"
     parallel_make
@@ -178,4 +178,12 @@ verify_artifacts "glibc-stage2" \
 )
 
 # ---------------- Where Things Are Actually Called --------------- #
+write_log_msg "Setting native build environment variables"
 native_build_env
+write_log_msg "Building and installing zlib"
+if build_zlib; then
+    write_log_msg "Completed"
+else
+    write_log_msg --err --level=4 "zlib build failed"
+    exit 1
+fi

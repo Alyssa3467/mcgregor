@@ -6,6 +6,8 @@ if ! (return 0 2>/dev/null); then
     exit 1
 fi
 
+
+
 # -------------------------------- Trap stuff -------------------------------- #
 # TODO: functions to remove existing traps?
 # ---------------------------------------------------------------------------- #
@@ -96,108 +98,6 @@ lotto() {
     else
         return 1
     fi
-}
-
-# ---------------------------- Build preparations ---------------------------- #
-# Usage:
-#   build_prep [--no-wipe] <target_dir>
-#
-# Arguments:
-#   --no-wipe    Optional flag. If provided, the function will NOT delete
-#                the contents of <target_dir>. Instead, it will preserve
-#                whatever is already there.
-#   <target_dir> Required. The name of the directory that should be prepared.
-#                The new directory will be under ${BUILD_ROOT}
-#
-# Behavior:
-#   - Validates arguments and prints usage on error.
-#   - By default, deletes and recreates <target_dir> to ensure a clean state.
-#   - If --no-wipe is given, preserves existing contents.
-#   - Creates the directory if it does not exist.
-#   - Logs the current environment variables to $LOG_DIR for reproducibility.
-build_prep() {
-    local no_wipe=false
-    local target_dir=""
-    local nonflag_count=0
-    local last_component sanitized
-
-    # Thy must choose only one <target_dir>
-    # The number of parameters shall be no more than 2.
-    # Before 2, thou cannot even, so zero is not allowed.
-    # Three is right out. Under no condition shall thou reach 5.
-    # A negative number has square roots only within thine imagination.
-    if (($# < 1 || $# > 2)); then
-        echo "Usage: build_prep [--no-wipe] <target_dir>" >&2
-        return 1
-    fi
-
-    if (($# < 0)); then
-        echo "Error: Negative parameters are forbidden." >&2
-        # shellcheck disable=SC2152
-        return 420 # How dost thou even reach this line?
-    fi
-
-    for arg in "$@"; do
-        case "$arg" in
-            --no-wipe) no_wipe=true ;;
-            *)
-                target_dir="$arg"
-                ((++nonflag_count))
-                ;;
-        esac
-    done
-
-    # Explicitly reject two non‑flag arguments
-    if ((nonflag_count > 1)); then
-        echo "Error: only one non-flag argument (target_dir) is allowed." >&2
-        return 1
-    fi
-
-    if [[ -z "$target_dir" ]]; then
-        echo "Error: target_dir is required." >&2
-        return 1
-    fi
-
-    # Extract final component
-    last_component="${target_dir##*/}"
-
-    sanitized=$(echo "$last_component" | tr -d '\000-\037' | tr '/\\:*?"<>|' '_')
-
-    # Handle reserved Windows device names
-    case "$sanitized" in
-        CON | PRN | AUX | NUL | COM[1-9] | LPT[1-9])
-            sanitized="_${sanitized}"
-            ;;
-    esac
-
-    # Detect multiple path components
-    # Rule: only "path" or "/path" is considered a single component
-    if [[ "$target_dir" == */* ]]; then
-        write_log_msg --std --level=1 "Multiple path components detected; only the last will be used: $sanitized"
-    else
-        write_log_msg --std --level=0 echo "Using: $sanitized"
-    fi
-
-    target_dir=${BUILD_ROOT}/${sanitized}
-    # Erase what's there and create a fresh new directory unless told otherwise
-    if [[ "$no_wipe" == false ]]; then
-        rm -rf "$target_dir"
-    fi
-    mkdir -p "$target_dir"
-
-    local flag=${DEBUG:-}
-    # TODO: different reporting levels?
-    # If DEBUG is set at all, log the current environment
-    if [[ -n $flag ]]; then
-
-        # Capture the environment
-        local log_file
-        log_file="${LOG_DIR}/prep-${sanitized}-env-dump.log"
-        echo -e "\n$(timestamp withdate)\n" | tee -a "$log_file" >/dev/null
-        env | sort | tee -a "$log_file" >/dev/null
-    fi
-
-    cd "$target_dir" || return 1
 }
 
 # -------------------------------------------------------- #
@@ -303,7 +203,7 @@ parallel_make() {
             fi
 
             echo "⚠️ Build failed with \"-j$jobs\", retrying with \"-j$nextjobs\" in 3 seconds..."
-            debug_msg "make ${safe_label} failed"
+            write_log_msg --err --level=3 "make ${safe_label} failed"
             sleep 3
         fi
 
@@ -454,7 +354,7 @@ verbose() {
     "$@"
     local status=$?
     set +x
-    debug_msg "($*) returned with status $status" >&2
+    write_log_msg "($*) returned with status $status" >&2
     return $status
 }
 
@@ -464,7 +364,7 @@ YOLO() {
     "$@"
     local status=$?
     set -e
-    debug_msg "($*) returned with status $status" >&2
+    write_log_msg "($*) returned with status $status" >&2
     return $status
 }
 
@@ -478,7 +378,7 @@ printsomestuff() {
     # Microsoft Copilot needs to stop being so fucking condescending
     set +x
 }
-add_exit_handler printsomestuff
+# add_exit_handler printsomestuff
 
 clean_shell() {
     if [ $# -eq 0 ]; then

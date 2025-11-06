@@ -65,9 +65,10 @@ timestamp() {
 
     case "$mode" in
         withdate)
-            echo -e "-----------------------------------------------------------\n" \
-                "$(date +%F)\n" \
-                "-----------------------------------------------------------"
+            echo \
+                "-----------------------------------------------------------
+                         $(date +%F)
+-----------------------------------------------------------"
             ;;
         perfectdate)
             echo "2063-04-25"
@@ -82,28 +83,28 @@ write_log_msg() {
     local pid=$$
     local script=${BASH_SOURCE[0]}
     local output
-    
+
     # Defaults
+    monosodiumglutamate=""
     fd=1
-    filename=""
+    filename="build.log"
     level=${INFO:-1} # default to INFO if not specified
     banner=false
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --err) fd=2 filename="error.log" shift ;;
-            --std) fd=1 filename="build.log" shift ;;
-            --filename=*) filename="${1#*=}" shift ;;
-            --level=*) level="${1#*=}" shift ;;
-            --banner) banner=true ;;
-            *) monosodiumglutamate="$*" break ;;
-                # TODO ? support multiple message arguments, each on its own line
+            --err) fd=2; filename="error.log"; shift ;;
+            --std) fd=1; filename="build.log"; shift ;;
+            --filename=*) filename="${1#*=}"; shift ;;
+            --level=*) level="${1#*=}"; shift ;;
+            --banner) banner=true; shift ;;
+            *) monosodiumglutamate="$*"; break ;;
         esac
     done
 
     if [[ -z "$LOG_DIR" ]]; then
         echo "LOG_DIR is not set" >&2
-        LOG_DIR=${TMPDIR:-}
+        LOG_DIR=${TMPDIR:-/tmp}
     fi
 
     # Sanitize filename
@@ -114,15 +115,14 @@ write_log_msg() {
         return 0
     fi
 
-    local output
     # Include PID and script name for DEBUG and FATAL
-    if [[ "$level" -eq "$DEBUG" || "$level" -eq "$FATAL" ]]; then
-        output="$(timestamp) [PID:${pid}] [SCRIPT:${script}] ${FUNCNAME[1]} - $monosodiumglutamate"
+    if [[ "$level" -eq "${DEBUG:-0}" || "$level" -eq "${FATAL:-999}" ]]; then
+        output="$(timestamp) [PID:${pid}] [SCRIPT:${script}] ${FUNCNAME[1]} - ${monosodiumglutamate}"
     else
-        output="$(timestamp)${FUNCNAME[1]} - $monosodiumglutamate"
+        output="$(timestamp) ${FUNCNAME[1]} - ${monosodiumglutamate}"
     fi
 
-    if $banner; then
+    if [[ "$banner" == true ]]; then
         output=$(
             cat <<EOF
 -----------------------------------------------------------
@@ -132,14 +132,16 @@ EOF
         )
     fi
 
+    # Write primary output
     echo "$output" | tee -a "${LOG_DIR}/${filename}" >&"$fd"
 
-    if [[ ! -z $monosodiumglutamate ]] && $banner; then
+    # If a banner was requested but a message was also supplied, avoid recursive calls
+    if [[ -n "$monosodiumglutamate" && "$banner" == true ]]; then
         ACP121_ZONE "✂️"
         local outcome=$?
-        local array=("HCF" "std" "err")
+        local array=("HCF" "std" "err") # Halt and Catch Fire
         if [ "$outcome" -eq 3 ]; then
-            write_log_msg --level="${level}" --"${array[$fd]}"
+            write_log_msg --level="${level}" --"${array[$fd]}" " "
             write_log_msg --level=1 --std "Calls with '--banner' should not include a message"
         else
             write_log_msg --level=2 --err "Message overridden by '--banner'"
@@ -191,15 +193,16 @@ should_log() {
     set +a
 
     flag=${DEBUG:-}
-    # If DEBUG is set at all, turn debugging messages on
     if [[ -z $flag ]]; then
         unset flag # Keep the variables contained
         return 0
     fi
     unset flag
 
-    # Redirect only stderr through error_log
-    exec 2> >(error_log)
     mkdir -p "${LOG_DIR}/"
-    echo "$(timestamp withdate) - Logging system initialized" | tee -a "${BUILD_LOG}" >&2
+    write_log_msg --banner --std
+    write_log_msg --banner --err
+
+    echo "$(timestamp) Begin session standard logs" | tee -a "${BUILD_LOG}" >&1
+    echo "$(timestamp) Begin session error logs" | tee -a "${ERROR_LOG}" >&2
 }

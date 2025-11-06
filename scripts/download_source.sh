@@ -8,7 +8,7 @@ fi
 
 download_source() {
     set_window_title "Download source files"
-    debug_msg "start download_source()"
+    write_log_msg "start download_source()"
     local BADV6_FILE="${PROJECT_ROOT}/.bad_ipv6_hosts"
     local normal_urls=()
     local ipv4_urls=()
@@ -81,7 +81,7 @@ download_source() {
         "master"
     )
     if [[ ${#GIT_repos[@]} -ne ${#GIT_refs[@]} ]]; then
-        debug_msg "❌ Repo and ref arrays are mismatched!"
+        write_log_msg --err --level=4 "❌ Repo and ref arrays are mismatched!"
         exit 1
     fi
 
@@ -106,7 +106,7 @@ download_source() {
 
     roll=$((($(od -An -N1 -tu1 /dev/urandom) % 4 + 1) + ($(od -An -N1 -tu1 /dev/urandom) % 4 + 1)))
 
-    debug_msg "Downloading: ${downloads_list[*]}"
+    write_log_msg "Downloading: ${downloads_list[*]}"
 
     for url in "${downloads_list[@]}"; do
         host="${url#*//}"  # strip scheme (http:// or https://)
@@ -120,7 +120,7 @@ download_source() {
 
     {
         if [[ ${#normal_urls[@]} -gt 0 ]]; then
-            debug_msg "Downloading with IPv6 enabled: ${normal_urls[*]}"
+            write_log_msg "Downloading with IPv6 enabled: ${normal_urls[*]}"
             if ! curl --ipv4 \
                 --continue-at - \
                 --retry $((roll + roll)) \
@@ -139,12 +139,12 @@ download_source() {
                     host="${host%%/*}" # strip everything after first /
                     if ! curl --remote-time --remote-name --fail --show-error --location "$url"; then
                         echo "❌ $host failed, retrying with IPv4..."
-                        debug_msg "IPv6 failed: $host"
+                        write_log_msg --err --level=2 "IPv6 failed: $host"
                         if curl --ipv4 --remote-time --remote-name --fail --show-error --location "$url"; then
-                            debug_msg "IPv4 succeeded"
+                            write_log_msg "IPv4 succeeded"
                             mark_bad_ipv6 "$host"
                         else
-                            debug_msg "Download failed for $url"
+                            write_log_msg --err --level=4 "Download failed for $url"
                             echo "❌ Download failed for $url"
                             exit 1
                         fi
@@ -154,7 +154,7 @@ download_source() {
         fi
 
         if [[ ${#ipv4_urls[@]} -gt 0 ]]; then
-            debug_msg "Downloading with IPv6 disabled: ${ipv4_urls[*]}"
+            write_log_msg  "Downloading with IPv6 disabled: ${ipv4_urls[*]}"
             curl --ipv4 \
                 --continue-at - \
                 --retry $((roll + roll)) \
@@ -209,7 +209,7 @@ download_source() {
         if verify_with_keyring "${KEYRING_DIR}" --no-default-keyring --keyring ./gnu-keyring.gpg; then
             continue
         fi
-        debug_msg "Signature check failed for $base"
+        write_log_msg --err --level=3 "Signature check failed for $base"
         echo "❌ Signature check failed for $base"
         exit 1
     done
@@ -275,7 +275,7 @@ download_source() {
             )
         fi
         (cd "$dir" && git submodule update --init --recursive)
-        debug_msg "Did the thing with $url"
+        write_log_msg "Did the thing with $url"
         echo
     done
 }
