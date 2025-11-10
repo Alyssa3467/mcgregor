@@ -7,7 +7,7 @@ cd "${SOURCE_ROOT}"
     write_log_msg "Linux kernel headers"
     TARBALL=$(find . -maxdepth 1 -name 'linux-*.tar.gz' | sort -V | tail -n1)
     [[ -n $TARBALL ]] || {
-        write_log_msg --err --level=4 "❌ No linux-*.tar.gz tarball found in ${SOURCE_ROOT}"
+        write_log_msg --err --level=4 "No linux-*.tar.gz tarball found in ${SOURCE_ROOT}"
         exit 1
     }
 
@@ -16,7 +16,7 @@ cd "${SOURCE_ROOT}"
 
     set_window_title "Host Kernel Headers"
 
-    echo "🛠️  Installing host kernel headers into ${HOST_SYSROOT}..."
+    write_log_msg "Installing host kernel headers into ${HOST_SYSROOT}..."
 
     mkdir -p "${HOST_SYSROOT}/usr"
     (

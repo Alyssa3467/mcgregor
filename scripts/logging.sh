@@ -26,9 +26,9 @@ ACP121_ZONE() {
     elif [[ $1 =~ ^[🪨📄✂️]$ ]]; then
         local passed=9
         case "$1" in
-            "🪨") passed=0 ;;
-            "📄") passed=1 ;;
-            "✂️") passed=2 ;;
+        "🪨") passed=0 ;;
+        "📄") passed=1 ;;
+        "✂️") passed=2 ;;
         esac
         local rps=(🪨 📄 ✂️)
         local number
@@ -37,9 +37,9 @@ ACP121_ZONE() {
         local result=$(((passed - number + 3) % 3))
         echo "Our choice: ""${hand}"" Their choice: ""$1"
         case $((++result)) in
-            1) echo "Tie" ;;
-            2) echo "They won" ;;
-            3) echo "We won" ;;
+        1) echo "Tie" ;;
+        2) echo "They won" ;;
+        3) echo "We won" ;;
         esac
         echo "But regardless, it still isn't a valid input value"
         return $((result))
@@ -64,43 +64,69 @@ timestamp() {
     dt=$(date +%T)"$(ACP121_ZONE)"
 
     case "$mode" in
-        withdate)
-            echo \
-                "-----------------------------------------------------------
+    withdatebanner)
+        local banner
+        banner="
+-----------------------------------------------------------
                          $(date +%F)
 -----------------------------------------------------------"
-            ;;
-        perfectdate)
-            echo "2063-04-25"
-            # Not too hot, not too cold. All you need is a light jacket.
-            ;;
+        echo "${banner}"
+        ;;
+    perfectdate)
+        echo "2063-04-25"
+        # Not too hot, not too cold. All you need is a light jacket.
+        ;;
     esac
     echo "[${dt}]"
 }
 
 write_log_msg() {
-    local fd level banner filename monosodiumglutamate # MSG!
+    local fd level banner show_banner filename output level_prefix message_prefix flavoring
     local pid=$$
+    local monosodiumglutamate=() # MSG!
     local script=${BASH_SOURCE[0]}
-    local output
+    banner="
+-----------------------------------------------------------
+    $(date +%F) $(timestamp)
+-----------------------------------------------------------"
 
-    # Defaults
-    monosodiumglutamate=""
     fd=1
     filename="build.log"
     level=${INFO:-1} # default to INFO if not specified
-    banner=false
+    show_banner=false
 
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --err) fd=2; filename="error.log"; shift ;;
-            --std) fd=1; filename="build.log"; shift ;;
-            --filename=*) filename="${1#*=}"; shift ;;
-            --level=*) level="${1#*=}"; shift ;;
-            --banner) banner=true; shift ;;
-            *) monosodiumglutamate="$*"; break ;;
+    local param
+    for param in "$@"; do
+        case "$param" in
+        --err)
+            fd=2
+            filename="error.log"
+            ;;
+        --std)
+            fd=1
+            filename="build.log"
+            ;;
+        --filename=*)
+            filename="${param#*=}"
+            ;;
+        --level=*)
+            level="${param#*=}"
+            ;;
+        --banner)
+            show_banner=true
+            ;;
+        *)
+            monosodiumglutamate+=("$param")
+            ;;
         esac
     done
+
+    if [[ ! "${level}" =~ ^([0-9]+|\"\$[A-Za-z_]+\")$ ]]; then
+        monosodiumglutamate+=("Invalid log level specified: ${level}")
+        level=${ERROR:-3}
+        fd=2
+        filename="error.log"
+    fi
 
     if [[ -z "$LOG_DIR" ]]; then
         echo "LOG_DIR is not set" >&2
@@ -115,38 +141,71 @@ write_log_msg() {
         return 0
     fi
 
+    if [[ ${#monosodiumglutamate[@]} -eq 0 ]]; then
+        if [[ "${show_banner}" == true ]]; then
+            echo "${banner}" | tee -a "${LOG_DIR}/${filename}" >&"$fd"
+        else
+            echo "$(timestamp) [This line intentionally left blank]" | tee -a "${LOG_DIR}/${filename}" >&"$fd"
+        fi
+        return 0 # Early return
+    fi
+
+    if [[ ${level} -lt 0 || ${level} -gt ${#LOG_LEVEL_NAMES[@]}-1 ]]; then
+        echo "$(timestamp) ${FUNCNAME[1]} [${LOG_LEVEL_NAMES[${WARN:-2}]}] - Invalid log level: ${level}." | tee -a "${LOG_DIR}/error.log" >&2
+        level_prefix="[ERROR LEVEL: ${level}]"
+    else
+        level_prefix="[${LOG_LEVEL_NAMES[${level}]}]"
+    fi
+
+    colorized_level() {
+        (
+            RED='\033[0;31m'
+            YELLOW='\033[0;33m'
+            GREEN='\033[0;32m'
+            BLUE='\033[0;34m'
+            RESET='\033[0m'
+
+            if [ "$level" -ge "${ERROR:-3}" ]; then
+                color_prefix=$RED
+            elif [ "$level" -eq "${WARN:-2}" ]; then
+                color_prefix=$YELLOW
+            elif [ "$level" -eq "${INFO:-1}" ]; then
+                color_prefix=$GREEN
+            else
+                color_prefix=$BLUE
+            fi
+
+            if [[ -t ${fd} ]]; then
+                # Output is a terminal; use colors
+                echo -e "${color_prefix}${level_prefix}${RESET}"
+            else
+                # No colors
+                echo "${level_prefix}"
+            fi
+        )
+    }
+
     # Include PID and script name for DEBUG and FATAL
     if [[ "$level" -eq "${DEBUG:-0}" || "$level" -eq "${FATAL:-999}" ]]; then
-        output="$(timestamp) [PID:${pid}] [SCRIPT:${script}] ${FUNCNAME[1]} - ${monosodiumglutamate}"
+        message_prefix="$(timestamp) $(colorized_level) [PID:${pid}] [SCRIPT:${script}] ${FUNCNAME[1]} - "
     else
-        output="$(timestamp) ${FUNCNAME[1]} - ${monosodiumglutamate}"
+        message_prefix="$(timestamp) $(colorized_level) ${FUNCNAME[1]} - "
     fi
 
-    if [[ "$banner" == true ]]; then
-        output=$(
-            cat <<EOF
------------------------------------------------------------
-    $(date +%F) $(timestamp)
------------------------------------------------------------
-EOF
-        )
-    fi
-
-    # Write primary output
-    echo "$output" | tee -a "${LOG_DIR}/${filename}" >&"$fd"
-
-    # If a banner was requested but a message was also supplied, avoid recursive calls
-    if [[ -n "$monosodiumglutamate" && "$banner" == true ]]; then
-        ACP121_ZONE "✂️"
-        local outcome=$?
-        local array=("HCF" "std" "err") # Halt and Catch Fire
-        if [ "$outcome" -eq 3 ]; then
-            write_log_msg --level="${level}" --"${array[$fd]}" " "
-            write_log_msg --level=1 --std "Calls with '--banner' should not include a message"
+    local first_line=true
+    for flavoring in "${monosodiumglutamate[@]}"; do
+        if [[ "$first_line" == true ]]; then
+            first_line=false
+            output="${message_prefix}"
         else
-            write_log_msg --level=2 --err "Message overridden by '--banner'"
+            output="              · "
         fi
-    fi
+
+        output+="${flavoring}"$'\n'
+        # Write primary output
+        echo -en "$output" | tee -a "${LOG_DIR}/${filename}" >&"$fd"
+        output=""
+    done
 }
 
 error_log() {
@@ -186,6 +245,7 @@ should_log() {
         WARN=2
         ERROR=3
         FATAL=4
+        LOG_LEVEL_NAMES=("DEBUG" "INFO" "WARN" "ERROR" "FATAL")
 
         # Default log level (can be overridden externally)
         LOG_LEVEL=${LOG_LEVEL:-$INFO}

@@ -103,14 +103,14 @@ get_verified_tarball() {
             exit 1
         fi
 
-        pushd "${TMPDIR}" >/dev/null || return 1
+        pushd "${TMPDIR}" >/dev/null || exit 1
         echo "Verifying checksum on linux-${VER}.tar.gz"
         if ! ${SHA256SUMBIN} -c "${SHACHECK}"; then
             echo "FAILED to verify the downloaded tarball checksum"
-            popd >/dev/null || return 1
+            popd >/dev/null || exit 1
             exit 1
         fi
-        popd >/dev/null || return 1
+        popd >/dev/null || exit 1
 
         echo
         echo "Verifying developer signature on the tarball"

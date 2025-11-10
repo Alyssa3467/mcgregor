@@ -32,6 +32,7 @@ no-default-keyring
 auto-key-locate wkd,keyserver,local
 auto-key-import
 auto-key-retrieve
+verbose
 keyserver-options honor-keyserver-url timeout=4
 keyring $KEYRING_FILE
 log-file $GPG_LOG_FILE

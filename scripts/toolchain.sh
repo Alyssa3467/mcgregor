@@ -2,18 +2,20 @@
 
 # shellcheck disable=2096
 # TODO: Convert to Makefile
-set -ueox pipefail
+set -ueo pipefail
 export LOG_LEVEL=0
+export USE_GCC_SYMLINKS=false
 
-# open FD 3 to a line-unbuffered consumer that wraps each line in cyan
-exec 3> >(sed -u $'s/.*/\033[36m&\033[0m/')
+# # open FD 3 to a line-unbuffered consumer that wraps each line in cyan
+# exec 3> >(sed -u $'s/.*/\033[36m&\033[0m/')
 
-export BASH_XTRACEFD=3
+# export BASH_XTRACEFD=3
 
-_cleanup_xtrace() {
-  exec 3>&- || true
-}
-trap _cleanup_xtrace EXIT
+# _cleanup_xtrace() {
+#   exec 3>&- || true
+# }
+# trap _cleanup_xtrace EXIT
+trap 'echo "Error at line $LINENO"; exit 1' ERR
 
 
 SCRIPT_DIR="$(

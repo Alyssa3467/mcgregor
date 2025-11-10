@@ -1,6 +1,7 @@
 {
-    "[shellscript]": {
-        "editor.defaultFormatter": "foxundermoon.shell-format"
+    "launch": {
+        "configurations": [],
+        "compounds": []
     },
     "comment-divider.length": 70,
     "comment-divider.mainHeaderTransform": "titlecase",
@@ -10,5 +11,4 @@
     "terminal.integrated.cursorBlinking": true,
     "terminal.integrated.cursorStyle": "underline",
     "terminal.integrated.enableVisualBell": true,
-    "chat.agent.enabled": true
 }

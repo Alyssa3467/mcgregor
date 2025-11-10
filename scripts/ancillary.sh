@@ -6,8 +6,6 @@ if ! (return 0 2>/dev/null); then
     exit 1
 fi
 
-
-
 # -------------------------------- Trap stuff -------------------------------- #
 # TODO: functions to remove existing traps?
 # ---------------------------------------------------------------------------- #
@@ -33,23 +31,24 @@ add_exit_handler() {
 }
 run_exit_handlers() {
     for handler in "${EXIT_HANDLERS[@]}"; do
-        eval "$handler" || echo -e "${handler} exited with code $?" >&2
+        eval "$handler" || echo -e "${handler} exited with code $?" 2>&1 | tee -a "${ERROR_LOG}"
     done
 }
 
 cleanup() {
     status=$?
     cmd=$BASH_COMMAND
-    echo "[EXIT] status=$status, last command: \"$cmd\"" >&2 | tee -a "${ERROR_LOG}"
+    echo "[EXIT] status=$status, last command: \"$cmd\"" 2>&1 | tee -a "${ERROR_LOG}"
     if [[ -n "${PROJECT_ROOT:-}" && -d "${PROJECT_ROOT}/tmp" ]]; then
         rm -rf "${PROJECT_ROOT}/tmp"
     fi
-    echo "so long and thanks for all the fish" >&2
+    echo "so long and thanks for all the fish" 2>&1
 }
 
 curl_wrapper() {
     # Just a thin shim around curl with basic failure handling
-    curl --fail --silent --show-error "$@"
+    # curl --fail --silent --show-error "$@"
+    curl --show-error "$@"
 }
 
 # ---------------------------------------------------------------------------- #
@@ -60,7 +59,7 @@ lotto() {
     ur_temp=$(mktemp lotto_ur.XXXXXX)
     {
         #----------------- What does the server say about our quota? ----------------- #
-        (($(curl -s "https://www.random.org/quota/?format=plain") > 9000)) || return 1
+        (($(curl -s "https://www.random.org/quota/?format=plain") > 9000)) || exit 1
         # -------------- What? 9000? There's no way that could be right. ------------- #
 
         # Get 5 numbers from random.org (1–70), sorted
@@ -96,7 +95,7 @@ lotto() {
     if [ "${org_nums[*]}" = "${ur_nums[*]}" ]; then
         return 0
     else
-        return 1
+        exit 1
     fi
 }
 
@@ -113,11 +112,11 @@ refresh_path() {
 
     for d in "${BIN_DIRS[@]}"; do
         case ":$PATH:" in
-            *":$d:"*) echo "   ✅ $d already in PATH" >&2 ;;
-            *)
-                echo "   ➕ Adding $d" >&2
-                PATH="$d:$PATH"
-                ;;
+        *":$d:"*) echo "   ✅ $d already in PATH" >&2 ;;
+        *)
+            echo "   ➕ Adding $d" >&2
+            PATH="$d:$PATH"
+            ;;
         esac
     done
 
@@ -148,19 +147,19 @@ parallel_make() {
     # Parse arguments
     for arg in "$@"; do
         case "$arg" in
-            startjobs=*)
-                jobs="${arg#startjobs=}"
-                ;;
-            loglabel=*)
-                label="${arg#loglabel=}" # explicit override
-                ;;
-            *)
-                args+=("$arg")
-                # If no explicit label yet, use first non-flag/assignment arg
-                if [[ $label == "default" && $arg != -* && $arg != *=* ]]; then
-                    label=$arg
-                fi
-                ;;
+        startjobs=*)
+            jobs="${arg#startjobs=}"
+            ;;
+        loglabel=*)
+            label="${arg#loglabel=}" # explicit override
+            ;;
+        *)
+            args+=("$arg")
+            # If no explicit label yet, use first non-flag/assignment arg
+            if [[ $label == "default" && $arg != -* && $arg != *=* ]]; then
+                label=$arg
+            fi
+            ;;
         esac
     done
 
@@ -199,7 +198,7 @@ parallel_make() {
             # 🚨 If we’re already at sequential and it failed, stop looping
             if ((jobs == 1)); then
                 echo "❌ Sequential build failed on attempt $attempt. No further retries." | tee -a "$logname"
-                return 1
+                exit 1
             fi
 
             echo "⚠️ Build failed with \"-j$jobs\", retrying with \"-j$nextjobs\" in 3 seconds..."
@@ -243,10 +242,10 @@ rand_delay() {
         if [ "$tmp" -eq 1 ]; then
             ms=$(($(od -An -N1 -tu1 </dev/urandom) % 1000 + 1))
             case "$ms" in
-                1000) time=1 ;;
-                [0-9]) time="0.00$ms" ;;
-                [1-9][0-9]) time="0.0$ms" ;;
-                *) time="0.$ms" ;;
+            1000) time=1 ;;
+            [0-9]) time="0.00$ms" ;;
+            [1-9][0-9]) time="0.0$ms" ;;
+            *) time="0.$ms" ;;
             esac
         else
             d1=$(($(od -An -N1 -tu1 </dev/urandom) % 10))
@@ -310,24 +309,22 @@ verify_artifacts() {
     local label="$1"
     shift
     local missing=0
-    local ts
-    ts="$(timestamp)"
 
-    echo "🔍 Verifying artifacts for: $label"
+    write_log_msg "Verifying artifacts for: $label"
 
     for file in "$@"; do
         if [[ ! -e "$file" ]]; then
-            echo "${ts} - [${label}] - ⚠️ Warning: Missing expected file: $file" | tee -a "$ERROR_LOG" >&2
+            write_log_msg --level=3 --err "Missing expected file: $file"
             ((++missing))
         else
-            echo "✅ Found: $file"
+            echo "Found: $file"
         fi
     done
 
     if ((missing > 0)); then
-        echo "${ts} - [${label}] - ⚠️ $missing artifact(s) missing for $label." | tee -a "$ERROR_LOG" >&2
+        write_log_msg "$missing artifact(s) missing for $label." --err --level=3
     else
-        echo "✅ All expected artifacts for $label are present."
+        write_log_msg "All expected artifacts for $label are present."
     fi
 
     # Extra check only if label starts with "gcc-"
@@ -339,11 +336,11 @@ verify_artifacts() {
         crtbegin="$($cc -print-file-name=crtbegin.o 2>/dev/null)"
 
         if [ -z "$sysroot" ]; then
-            echo "${ts} ❌ $label: compiler did not report a sysroot" | tee -a "$ERROR_LOG" >&2
+            write_log_msg "$label: compiler did not report a sysroot" --level=3 --err
         elif [ "$crtbegin" = "crtbegin.o" ] || [ ! -f "$crtbegin" ]; then
-            echo "${ts} ❌ $label: compiler cannot locate crtbegin.o (sysroot=$sysroot)" | tee -a "$ERROR_LOG" >&2
+            write_log_msg "$label: compiler cannot locate crtbegin.o (sysroot=$sysroot)" --err --level=3
         else
-            echo "✅ $label: sysroot=$sysroot, crtbegin.o found at $crtbegin"
+            write_log_msg "$label: sysroot=$sysroot, crtbegin.o found at $crtbegin"
         fi
     fi
 }
@@ -355,6 +352,9 @@ verbose() {
     local status=$?
     set +x
     write_log_msg "($*) returned with status $status" >&2
+    if ((status != 0)); then
+        exit $status
+    fi
     return $status
 }
 
@@ -365,6 +365,9 @@ YOLO() {
     local status=$?
     set -e
     write_log_msg "($*) returned with status $status" >&2
+    if ((status != 0)); then
+        exit $status
+    fi
     return $status
 }
 
@@ -383,7 +386,10 @@ printsomestuff() {
 clean_shell() {
     if [ $# -eq 0 ]; then
         echo "clean_shell: command required" >&2
-        return 1
+        if ((status != 0)); then
+            exit "$status"
+        fi
+        exit 1
     fi
     env -i \
         HOME="$HOME" \

@@ -64,6 +64,7 @@ download_source() {
         "gmp/gmp-6.3.0.tar.bz2"
         "mpc/mpc-1.3.1.tar.gz"
         "mpfr/mpfr-4.2.2.tar.bz2"
+        "texinfo/texinfo-7.2.tar.gz"
     )
     local otherDownloads=(
         "https://ftp.gnu.org/gnu/gnu-keyring.gpg"
@@ -73,7 +74,7 @@ download_source() {
     local GIT_repos=(
         "git://sourceware.org/git/binutils-gdb.git"
         "git://repo.or.cz/isl.git"
-        "git://github.com/madler/zlib.git"
+        "https://github.com/madler/zlib.git"
     )
     local GIT_refs=(
         "binutils-2_45"
@@ -106,7 +107,7 @@ download_source() {
 
     roll=$((($(od -An -N1 -tu1 /dev/urandom) % 4 + 1) + ($(od -An -N1 -tu1 /dev/urandom) % 4 + 1)))
 
-    write_log_msg "Downloading: ${downloads_list[*]}"
+    write_log_msg "Downloading: " "${downloads_list[@]}"
 
     for url in "${downloads_list[@]}"; do
         host="${url#*//}"  # strip scheme (http:// or https://)
@@ -120,7 +121,7 @@ download_source() {
 
     {
         if [[ ${#normal_urls[@]} -gt 0 ]]; then
-            write_log_msg "Downloading with IPv6 enabled: ${normal_urls[*]}"
+            write_log_msg "Downloading with IPv6 enabled: " "${normal_urls[@]}"
             if ! curl --ipv4 \
                 --continue-at - \
                 --retry $((roll + roll)) \
@@ -278,6 +279,11 @@ download_source() {
         write_log_msg "Did the thing with $url"
         echo
     done
+
+cd "${SOURCE_ROOT}"/isl/
+./autogen.sh
+
+
 }
 
 # run the function
