@@ -182,6 +182,10 @@ parallel_make() {
         if make -j"$jobs" "${args[@]}" 2>&1 | tee -a "$logname"; then
             echo "✅ Build succeeded on attempt $attempt with $jobs jobs" | tee -a "$logname"
             break
+        elif [ "${safe_label}" = "binutils-check" ]; then
+        
+            echo -e "\n# --------------------- Kobayashi Maru --------------------- #"
+            break
         elif grep -q "Segmentation fault" "$logname"; then
             echo "❌ Segmentation fault detected during $label build." | tee -a "$logname"
             ((++segfault))
@@ -191,6 +195,9 @@ parallel_make() {
                 echo "Three consecutive segmentation faults detected. Switching immediately to sequential build." | tee -a "$logname"
                 jobs=1
             fi
+        elif grep -q "No rule to make target" "$logname"; then
+            echo "❌ Hard error: target not found. Aborting." | tee -a "$logname"
+            break
         else
             # Reset number of consecutive segfaults
             segfault=0

@@ -30,9 +30,9 @@ download_source() {
         local homedir="$1"
         local keyring_opt=("${@:2}") # optional extra args like --keyring FILE
         if gpg "${keyring_opt[@]}" --homedir "$homedir" --verify "$sig" "$base" 2>/dev/null; then
-            echo "✔️  Verified with ${label}"
+            echo "Verified with ${label}"
             if [[ -n "$keyid" ]]; then
-                echo "🔑 Signer information:"
+                echo "Signer information:"
 
                 gpg "${keyring_opt[@]}" --homedir "$homedir" \
                     --list-keys --with-subkey-fingerprints "$keyid" |
@@ -43,9 +43,9 @@ download_source() {
 
                 if [[ -n "$key_expiry" ]]; then
                     if [[ "$file_ts" -gt "$key_expiry" ]]; then
-                        echo "⚠️  File $base is newer than the key's expiration date ($key_expiry)"
+                        echo "File $base is newer than the key's expiration date ($key_expiry)"
                     elif [[ "$file_ts" -lt "$key_expiry" && "$(date +%s)" -gt "$key_expiry" ]]; then
-                        echo "ℹ️  Key $keyid is currently expired, but it was valid when $base was signed."
+                        echo "Key $keyid is currently expired, but it was valid when $base was signed."
                     fi
                 fi
             fi
@@ -67,16 +67,20 @@ download_source() {
         "texinfo/texinfo-7.2.tar.gz"
     )
     local otherDownloads=(
+        "https://downloads.sourceforge.net/project/tcl/Tcl/8.6.17/tcl8.6.17-src.tar.gz"
+        "https://downloads.sourceforge.net/project/expect/Expect/5.45.4/expect5.45.4.tar.gz"
         "https://ftp.gnu.org/gnu/gnu-keyring.gpg"
         "https://gcc.gnu.org/pub/gcc/infrastructure/md5.sum"
         "https://gcc.gnu.org/pub/gcc/infrastructure/sha512.sum"
     )
     local GIT_repos=(
+        "git://git.sv.gnu.org/dejagnu.git"
         "git://sourceware.org/git/binutils-gdb.git"
         "git://repo.or.cz/isl.git"
-        "https://github.com/madler/zlib.git"
+        "git://github.com/madler/zlib.git"
     )
     local GIT_refs=(
+        "dejagnu-1.6.3-release"
         "binutils-2_45"
         "isl-0.27"
         "master"
@@ -139,14 +143,14 @@ download_source() {
                     host="${url#*//}"  # strip scheme (http:// or https://)
                     host="${host%%/*}" # strip everything after first /
                     if ! curl --remote-time --remote-name --fail --show-error --location "$url"; then
-                        echo "❌ $host failed, retrying with IPv4..."
+                        echo "$host failed, retrying with IPv4..."
                         write_log_msg --err --level=2 "IPv6 failed: $host"
                         if curl --ipv4 --remote-time --remote-name --fail --show-error --location "$url"; then
                             write_log_msg "IPv4 succeeded"
                             mark_bad_ipv6 "$host"
                         else
                             write_log_msg --err --level=4 "Download failed for $url"
-                            echo "❌ Download failed for $url"
+                            echo "Download failed for $url"
                             exit 1
                         fi
                     fi
@@ -155,7 +159,7 @@ download_source() {
         fi
 
         if [[ ${#ipv4_urls[@]} -gt 0 ]]; then
-            write_log_msg  "Downloading with IPv6 disabled: ${ipv4_urls[*]}"
+            write_log_msg "Downloading with IPv6 disabled: ${ipv4_urls[*]}"
             curl --ipv4 \
                 --continue-at - \
                 --retry $((roll + roll)) \
@@ -175,7 +179,7 @@ download_source() {
         base="${sig%.sig}"
         keyid=$(gpg --list-packets "$sig" | awk '/keyid/ {print $6; exit}')
         echo
-        echo "❓ Verifying: $base"
+        echo "Verifying: $base"
 
         label="local keyring"
         if verify_with_keyring "$HOME/.gnupg/"; then
@@ -189,7 +193,7 @@ download_source() {
 
         # Try fetching missing keys from common keyservers
         if [[ -n "$keyid" ]]; then
-            echo "🌐 Attempting to fetch key $keyid from keyservers..."
+            echo "Attempting to fetch key $keyid from keyservers..."
             # Are you the keymaster?
             for ks in zuul.rediris.es gozer.rediris.es keys.openpgp.org keyserver.ubuntu.com pgp.mit.edu; do
                 echo "$ks:"
@@ -211,7 +215,7 @@ download_source() {
             continue
         fi
         write_log_msg --err --level=3 "Signature check failed for $base"
-        echo "❌ Signature check failed for $base"
+        echo "Signature check failed for $base"
         exit 1
     done
 
@@ -238,10 +242,10 @@ download_source() {
             if [[ -s "$present" ]] && grep -q '[^[:space:]]' "$present"; then
                 "${algo}sum" --ignore-missing -c "$present" || exit 1
             else
-                echo "ℹ️ No ${algo^^} entries to check"
+                echo "No ${algo^^} entries to check"
             fi
         else
-            echo "ℹ️ No $sumfile file found, skipping ${algo^^} check"
+            echo "No $sumfile file found, skipping ${algo^^} check"
         fi
     }
 
@@ -260,12 +264,12 @@ download_source() {
 
         if [[ -d "$dir/.git" ]]; then
             (
-                echo "✔️ Repo $dir already cloned"
+                echo "Repo $dir already cloned"
                 (cd "$dir" && git fetch origin && (git checkout -B "$ref" "origin/$ref" ||
                     git checkout "$ref"))
             )
         else
-            echo "⬇️ Cloning $url at $ref"
+            echo "Cloning $url at $ref"
             (
                 git clone "$url" "$dir"
                 if (cd "$dir" && git checkout -B "$ref" "origin/$ref"); then
@@ -280,9 +284,9 @@ download_source() {
         echo
     done
 
-cd "${SOURCE_ROOT}"/isl/
-./autogen.sh
-
+    # specific to ISL
+    cd "${SOURCE_ROOT}"/isl/
+    ./autogen.sh
 
 }
 

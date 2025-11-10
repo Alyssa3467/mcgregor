@@ -2,7 +2,7 @@
 
 # shellcheck disable=2096
 # TODO: Convert to Makefile
-set -ueo pipefail
+set -Eueo pipefail
 export LOG_LEVEL=0
 export USE_GCC_SYMLINKS=false
 

@@ -241,8 +241,8 @@ function build_prep() {
         write_log_msg --level="$DEBUG" "Dumping environment to log file: ${log_file}"
         echo -e "\n$(timestamp withdate)\n" | tee -a "$log_file" >/dev/null
         env | sort | grep -v '^BASH_FUNC_' | tee -a "$log_file" >/dev/null
-        echo -e "Normal ordere because stupid reasons" | tee -a "${log_file}" >/dev/null
-        env | grep -v '^BASH_FUNC_' | tee -a "$log_file" >/dev/null
+        echo -e "\n\nNormal order because stupid reasons" | tee -a "${log_file}" >/dev/null
+        env | tee -a "$log_file" >/dev/null
     
     fi
 

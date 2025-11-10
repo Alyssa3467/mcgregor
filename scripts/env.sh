@@ -52,7 +52,7 @@ fi
     TMPDIR=$(mktemp -d -p "${PROJECT_ROOT}/tmp")
     TEMP="${TMPDIR}"
     TMP="${TEMP}"
-
+    set +a
     native_build_env() {
         set -a
         # HOST=$("${SCRIPT_DIR}"/config.guess "$(uname -m)")
@@ -62,16 +62,6 @@ fi
 
         HOST_INST_DIR="${TOOLCHAIN_ROOT}/install/${HOST}"
         HOST_SYSROOT="${TOOLCHAIN_ROOT}/sysroot/${HOST}"
-        HOST_BUILD_DIR="${BUILD_ROOT}/${HOST}"
-        (
-            for j in ${HOST_INST_DIR} ${HOST_SYSROOT} ${HOST_BUILD_DIR}; do
-                mkdir -p "$j"
-            done
-        ) || (
-            write_log_msg --level=4 --err "Error creating ${HOST} working directories"
-            exit 1
-        )
-
         HOST_GCC_CONFIG=(
             --prefix="${HOST_INST_DIR}"
             --target="${HOST}"
@@ -93,6 +83,16 @@ fi
             --enable-libstdcxx-time=yes
             --enable-multilib
         )
+        HOST_BUILD_DIR="${BUILD_ROOT}/${HOST}"
+        (
+            for j in ${HOST_INST_DIR} ${HOST_SYSROOT} ${HOST_BUILD_DIR}; do
+                mkdir -p "$j"
+            done
+        ) || (
+            write_log_msg --level=4 --err "Error creating ${HOST} working directories"
+            exit 1
+        )
+
         set +a
     }
 
@@ -129,6 +129,5 @@ fi
         DEFCONFIG="bcmrpi_defconfig"
         set +a
     }
-
     set +a
 }
