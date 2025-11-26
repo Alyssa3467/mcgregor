@@ -3,7 +3,7 @@
         "configurations": [],
         "compounds": []
     },
-    "comment-divider.length": 70,
+    "comment-divider.length": 80,
     "comment-divider.mainHeaderTransform": "titlecase",
     "comment-divider.shouldLengthIncludeIndent": true,
     "comment-divider.subheaderTransform": "titlecase",
