@@ -1,0 +1,120 @@
+# Secrets
+.env
+*.key
+*.pem
+SECRET_FILE_DO_NOT_COPY.md
+**/.ssh/id_*
+**/.ssh/*_id_*
+**/.ssh/known_hosts
+.authorized_hosts
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.out
+CHACHAPOYAN_FERTILITY_IDOL
+*.bin
+*.elf
+*.mod
+*.ko
+*.d
+
+# Logs
+*.log
+*.log.*
+logs/
+
+# Source trees
+source/
+binutils-*/
+gcc-*/
+glibc-*/
+mpfr-*/
+gmp-*/
+mpc-*/
+
+# Archives
+*.tar.*
+*.zip
+*.xz
+*.7z
+
+# Editor junk
+*.swp
+.DS_Store
+.idea/
+
+# Temporary/Backup
+*~
+~*
+*.000
+*.backup
+*-backups
+*-bak
+*-bak*
+*.bak
+*.bck
+*-cache*
+*.cache
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*.old
+*.orig
+*.tmp
+tmp.*/
+
+### Visual Studio Code ###
+.history
+.history/
+*.vsix
+.ionide
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+### PlatformIO ###
+.pioenvs
+.piolibdeps
+.clang_complete
+.gcc-flags.json
+.pio
+
+# Script Output
+build/
+raspberrypi/sysroot
+toolchain/
+
+# Misc
+config.guess
+config.sub
+
+# KiCad
+_autosave-*
+\#auto_saved_files\#
+*-save.pro
+*-save.kicad_pcb
+fp-info-cache
+~*.lck
+\#auto_saved_files#
+*.net
+*.dsn
+*.ses
+*.xml
+*.csv
+**/*-backups/*.zip
+*.kicad_prl
+keys/
+
+# Created by git when using merge tools for conflicts
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+*_BACKUP_*.txt
+*_BASE_*.txt
+*_LOCAL_*.txt
+*_REMOTE_*.txt
