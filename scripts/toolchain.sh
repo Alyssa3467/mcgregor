@@ -1,8 +1,8 @@
-#!/usr/bin/env -iS PATH=/usr/bin:/bin HOME="${HOME}" USER="${USER}" TERM=xterm-256color LANG=C bash
+#!/usr/bin/env -iS PATH=/usr/bin:/bin HOME="${HOME}" USER="${USER}" TERM=xterm-256color LC_ALL=C LANG=C bash
 
 # shellcheck disable=2096
 # TODO: Convert to Makefile
-set -Eueo pipefail
+set -ETueo pipefail
 
 SCRIPT_DIR="$(
   if command -v readlink >/dev/null && readlink -f . >/dev/null 2>&1; then
@@ -12,15 +12,22 @@ SCRIPT_DIR="$(
   fi
 )"
 
+# ------------------- Process (some) Command Line Arguments ------------------ #
 . "${SCRIPT_DIR}"/gcc-symlink-flags.sh "$@"
 
 # Replace positional parameters with remaining args
-# If REMAINING_ARGS is empty, this sets an empty positional list
-if [[ -n "${REMAINING_ARGS:-}" ]]; then
+# If REMAINING_ARGS is non-empty, restore them into $@
+if [ -n "${REMAINING_ARGS:-}" ]; then
+  # Use eval to split the space-separated string into proper arguments
   eval "set -- ${REMAINING_ARGS}"
 else
+  # No remaining args; clear positional parameters
   set --
 fi
+if [[ -v REMAINING_ARGS ]]; then
+  unset REMAINING_ARGS # cleanup: prevent leakage
+fi
+# ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
 #                              Ancillary Functions                             #

@@ -3,15 +3,15 @@
 if ! grep -q "Ubuntu" /etc/os-release; then
     if grep -q "Windows" /etc/os-release; then
         echo "Wut?" >&2
-        exit 1
+        exit 71
     fi
-    exit 255
+    exit 69
 elif [[ "$(date +%m%d)" == "0230" ]]; then
     echo "What in the name of Hyrule is going on here?" >&2
-    exit 42
+    exit 66
 elif [[ "$(TZ="America/Los_Angeles" date -Iminutes)" == "1955-11-05T06:15-08:00" ]]; then
     echo "Great Scott!" >&2
-    exit 42
+    exit 66
 elif [[ "$(TZ="US/Mountain" date -I)" == "2063-04-05" ]]; then
     echo "🖖"
 fi
@@ -20,15 +20,15 @@ current_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "If you'd like to make a call, please hang up and try again. If you need help, dial the operator." >&2
     kill -s SIGHUP $$
-    exit 254
+    exit 64
 elif [[ -z "${SCRIPT_DIR:-}" ]]; then
     SCRIPT_DIR="${current_dir}"
 elif [[ "${SCRIPT_DIR}" != "${current_dir}" ]]; then
-    exit 252
+    exit 78
 fi
 unset current_dir
 
-# --- bootstrap: ensure config scripts and logging ---------------------------
+
 fetch_config_scripts() {
     local url_guess="https://git.savannah.gnu.org/cgit/config.git/plain/config.guess"
     local url_sub="https://git.savannah.gnu.org/cgit/config.git/plain/config.sub"
@@ -37,7 +37,7 @@ fetch_config_scripts() {
         echo "Fetching GNU config.guess..."
         if ! curl -fsSLo "${SCRIPT_DIR}/config.guess" "${url_guess}"; then
             echo "Failed to download config.guess"
-            exit 253
+            exit 75
         fi
         chmod +x "${SCRIPT_DIR}/config.guess"
     fi
@@ -46,7 +46,7 @@ fetch_config_scripts() {
         echo "Fetching GNU config.sub..."
         if ! curl -fsSLo "${SCRIPT_DIR}/config.sub" "${url_sub}"; then
             echo "Failed to download config.sub"
-            exit 253
+            exit 75
         fi
         chmod +x "${SCRIPT_DIR}/config.sub"
     fi
@@ -54,7 +54,7 @@ fetch_config_scripts() {
 }
 
 if ! fetch_config_scripts; then
-    exit 253
+    exit 75
 fi
 
 detect_host_triplet() {
@@ -106,7 +106,7 @@ get_defconfig() {
         [arm64]="arm64_defconfig"
     )
 
-    # Raspberry Pi specific overrides keyed by arch:kernel
+    # Raspberry Pi specific overrides keyed by arch_kernel
     # Information from:
     #     https://www.raspberrypi.com/documentation/computers/linux_kernel.html#cross-compiled-build-configuration
     declare -A defconfig=(
@@ -130,18 +130,23 @@ get_defconfig() {
     elif [[ "${kernel}" != "NOTPI" ]]; then
         if [[ ${arch} =~ ^(arm(64)?)$ ]]; then
             echo "Possible unsupported Raspberry Pi variant?" >&2
-            exit 255
+            exit 78
         else
-            echo "[insert expletive here]" >&2
-            exit 255
+            echo "Possible unsupported non-ARM Raspberry Pi variant? 🤨" >&2
+            exit 78
         fi
     else
         echo "Unknown or unsupported architecture: ${arch}" >&2
-        exit 255
+        exit 78
     fi
 }
 
 # ---------------------------------------------------------------------------- #
+CC=$(command -v icx || command -v clang || command -v gcc)
+CXX=$(command -v dpcpp || command -v clang++ || command -v g++)
+echo "CC: ${CC}"
+echo "CXX: ${CXX}"
+
 : "${PROJECT_ROOT:=${PROJECT_ROOT:-$(dirname "${SCRIPT_DIR}")}}"
 : "${SOURCE_ROOT:=${SOURCE_ROOT:-${PROJECT_ROOT}/source}}"
 : "${TOOLCHAIN_ROOT:=${TOOLCHAIN_ROOT:-${PROJECT_ROOT}/toolchain}}"
@@ -151,6 +156,9 @@ get_defconfig() {
 
 mkdir -p "${SOURCE_ROOT}"
 
+# Environment variables that directly affect
+# compiler behavior should NOT be read-only
+export CC CXX
 export SCRIPT_DIR PROJECT_ROOT SOURCE_ROOT TOOLCHAIN_ROOT BUILD_ROOT INSTALL_ROOT SYSROOT
 readonly SCRIPT_DIR PROJECT_ROOT SOURCE_ROOT TOOLCHAIN_ROOT BUILD_ROOT INSTALL_ROOT SYSROOT
 # ---------------------------------------------------------------------------- #
