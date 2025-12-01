@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    vars="SOURCE_ROOT HOST HOST_SYSROOT HOST_CPU DEFCONFIG"
+    for var in ${!vars}; do
+        if [[ -z ${var} ]]; then
+            echo "${var} is not set. A future revision of this script will prompt for a value, but for now, you're SOL" >&2
+            exit 78
+        fi
+    done
+fi
+
 (
     # -------------------------- Download git repository ------------------------- #
 
