@@ -13,8 +13,25 @@ fi
 if ! declare -F require_func >/dev/null; then
     require_func() {
         for func in "$@"; do
-            if ! declare -F "${func}" >/dev/null; then
-                source "$(dirname "${SOURCE_ROOT:-${BASH_SOURCE[0]}}")/env.sh"
+            if ! declare -F "$func" >/dev/null; then
+                for f in env.sh ancillary.sh; do
+                    file="$(dirname "${SOURCE_ROOT:-${BASH_SOURCE[0]}}")/$f"
+                    if [[ -r "$file" ]]; then
+                        safe_func=$(echo "$func" | sed 's/[][^$.*/+?(){}|]/\\&/g')
+                        if grep -Eq \
+                            "^[^\r\n\S]*(function[^\r\n\S]+|)$safe_func([^\r\n\S]*\(\))?[^\r\n\S]*\{[^\r\n\S]*.*(\r\n|\n)" \
+                            "$file"; then
+                            # shellcheck disable=SC1090
+                            source "$file"
+                            if declare -F "$func" >/dev/null; then
+                                break
+                            fi
+                        fi
+                    fi
+                done
+            fi
+            if ! declare -F "$func" >/dev/null; then
+                return 1
             fi
         done
     }
