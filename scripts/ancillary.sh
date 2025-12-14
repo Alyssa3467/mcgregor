@@ -254,3 +254,21 @@ refresh_path() {
     export PATH
     # write_log_msg --level="${INFO}" --std "Set path: PATH=${PATH}"
 }
+
+require_var() {
+    local prompt=false
+    [ "$1" == "--direct-run--" ] && prompt=true && shift
+
+    for var in "$@"; do
+        if [[ -z ${!var:-} ]]; then
+            if [[ "${prompt}" == true ]]; then
+                read -rp "Please enter a value for ${var}: " user_input
+                # TODO: sanitize input
+                export "${var}"="${user_input}"
+            else
+                echo "${var} must be set" >&2
+                exit 78
+            fi
+        fi
+    done
+}
