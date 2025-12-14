@@ -45,11 +45,13 @@ fi
 # ---------------------------------------------------------------------------- #
 export CREATE_RPI_KERNEL_HEADERS="yes"
 . "${SCRIPT_DIR}"/rpi-kernel.sh
+unset CREATE_RPI_KERNEL_HEADERS
 
 # ---------------------------------------------------------------------------- #
 #                     Download the latest main Linux kernel                    #
 #                Install Linux Kernel Headers Into $HOST_SYSROOT               #
 # ---------------------------------------------------------------------------- #
+. "${SCRIPT_DIR}"/host-kernel.sh
 
 # ---------------------------------------------------------------------------- #
 #                             Download source files                            #
