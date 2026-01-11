@@ -177,3 +177,17 @@ mkdir -p "${HOST_TOOLCHAIN}" "${HOST_BUILD}" "${HOST_INSTALL}" "${HOST_SYSROOT}"
 
 export HOST_TRIPLET HOST_ARCH HOST_DEFCONFIG
 export HOST_BUILD HOST_SYSROOT HOST_INSTALL
+
+# ---------------------------------------------------------------------------- #
+#                               Target Variables                               #
+# ---------------------------------------------------------------------------- #
+# --------------------------- Raspberry Pi Zero 2 W -------------------------- #
+TARGET_TRIPLET="aarch64-linux-gnu"
+KERNEL="kernel8"
+TARGET_ARCH="arm64"
+TARGET_DEFCONFIG="$(get_defconfig "${TARGET_ARCH}")"
+
+TARGET_TOOLCHAIN="${TOOLCHAIN_ROOT}/${TARGET_TRIPLET}"
+TARGET_SYSROOT="${SYSROOT}/${TARGET_TRIPLET}"
+
+export TARGET_TRIPLET TARGET_ARCH TARGET_DEFCONFIG KERNEL TARGET_TOOLCHAIN TARGET_SYSROOT
