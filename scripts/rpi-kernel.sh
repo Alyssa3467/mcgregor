@@ -4,11 +4,11 @@ set -euo pipefail
 # ----------------- Make Sure The Necessary Variables Are Set ---------------- #
 # -------------------- And Necessary Functions Are Defined ------------------- #
 req_vars=(SOURCE_ROOT TARGET_TRIPLET TARGET_SYSROOT KERNEL TARGET_ARCH)
-req_func=(get_defconfig require_var git-sync)
+req_func=(require_var git-sync)
 
-if ! declare -F get_defconfig >/dev/null; then
-    source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
-fi
+# if ! declare -F get_defconfig >/dev/null; then
+#     source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+# fi
 
 if ! declare -F require_func >/dev/null; then
     require_func() {
@@ -44,7 +44,7 @@ require_func "${req_func[@]}"
         CREATE_RPI_KERNEL_HEADERS="yes"
 } || require_var "${req_vars[@]}"
 
-TARGET_DEFCONFIG="$(get_defconfig "${TARGET_ARCH}")"
+
 
 if [ "$CREATE_RPI_KERNEL_HEADERS" = "yes" ]; then
     (
