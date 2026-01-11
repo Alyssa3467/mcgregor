@@ -1,8 +1,25 @@
-#!/usr/bin/env -iS PATH=/usr/bin:/bin HOME="${HOME}" USER="${USER}" TERM=xterm-256color LC_ALL=C LANG=C bash
+#!/usr/bin/env -iS PATH=${HOME}/.local/bin:/usr/bin:/bin HOME="${HOME}" USER="${USER}" TERM=xterm-256color LC_ALL=C LANG=C bash
 
-# shellcheck disable=2096
+# shellcheck disable=SC2096,SC2317
 # TODO: Convert to Makefile
-set -ETueo pipefail
+set -eou pipefail
+
+# Import Intel OneAPI environment variables
+{
+  saved=("$@")
+
+  export OCL_ICD_FILENAMES="" TCM_ROOT=""
+
+  # Clear positional parameters so setvars.sh sees nothing
+  set --
+
+  source /opt/intel/oneapi/setvars.sh
+
+  set -- "${saved[@]}"
+  unset saved
+}
+
+set -x
 
 SCRIPT_DIR="$(
   if command -v readlink >/dev/null && readlink -f . >/dev/null 2>&1; then
