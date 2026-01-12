@@ -51,9 +51,10 @@ if [ "$CREATE_RPI_KERNEL_HEADERS" = "yes" ]; then
         # -------------------------- Download git repository ------------------------- #
         mkdir -p "${SOURCE_ROOT}/raspberrypi" && cd "${SOURCE_ROOT}"
         REPO_HOME="${SOURCE_ROOT}/raspberrypi"
+        REPO_REFSPEC="rpi-6.12.y"
 
         REPO_URL="https://github.com/raspberrypi/linux.git"
-        git-sync "${REPO_URL}" --dir "${REPO_HOME}/linux"
+        git-sync "${REPO_URL}" --dir "${REPO_HOME}/linux" --ref "${REPO_REFSPEC}"
 
         # -------------------------- Install kernel headers -------------------------- #
         cd "${SOURCE_ROOT}/raspberrypi/linux"
@@ -69,3 +70,5 @@ if [ "$CREATE_RPI_KERNEL_HEADERS" = "yes" ]; then
         echo -e "Raspberry Pi kernel headers installed.\n"
     )
 fi
+
+unset KERNEL
