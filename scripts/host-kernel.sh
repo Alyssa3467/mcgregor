@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# TODO: Genericize
+
 # ----------------- Make Sure The Necessary Variables Are Set ---------------- #
 # -------------------- And Necessary Functions Are Defined ------------------- #
 req_vars=(SOURCE_ROOT HOST_TRIPLET HOST_SYSROOT HOST_ARCH)
@@ -57,8 +59,9 @@ HOST_DEFCONFIG="$(get_defconfig "${HOST_ARCH}")"
     make ARCH="${HOST_ARCH}" mrproper
     echo "Installing Linux kernel headers..."
     mkdir -p "${HOST_SYSROOT}/usr" # ensure destination exists
-    make ARCH="${HOST_ARCH}" CROSS_COMPILE="${HOST_TRIPLET}-" "${HOST_DEFCONFIG}" V=2 |
-        sed '/^#$/ {N;N;/^#\n# No change to \.config\n#$/d}'
+    # make ARCH="${HOST_ARCH}" CROSS_COMPILE="${HOST_TRIPLET}-" "${HOST_DEFCONFIG}" V=2 |
+    #     sed '/^#$/ {N;N;/^#\n# No change to \.config\n#$/d}'
+    make ARCH="${HOST_ARCH}" "${HOST_DEFCONFIG}" V=2 | sed '/^#$/ {N;N;/^#\n# No change to \.config\n#$/d}'
     make ARCH="${HOST_ARCH}" INSTALL_HDR_PATH="${HOST_SYSROOT}/usr" headers_install V=2 |
         sed -u \
             -e '/^#$/ {N;N;/^#\n# No change to \.config\n#$/d}' \
